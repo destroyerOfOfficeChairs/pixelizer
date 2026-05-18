@@ -1,9 +1,3 @@
-[package]
-name = "pixelizer"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-eframe = { version = "0.34.2", features = ["persistence"]}
-egui = "0.34.2"
-serde = "1.0.228"
+[workspace]
+resolver = "3"
+members = ["app", "cli", "core"]

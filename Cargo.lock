@@ -2383,13 +2383,25 @@ dependencies = [
 ]
 
 [[package]]
-name = "pixelizer"
+name = "pixelizer-app"
 version = "0.1.0"
 dependencies = [
  "eframe",
  "egui",
+ "pixelizer-core",
  "serde",
 ]
+
+[[package]]
+name = "pixelizer-cli"
+version = "0.1.0"
+dependencies = [
+ "pixelizer-core",
+]
+
+[[package]]
+name = "pixelizer-core"
+version = "0.1.0"
 
 [[package]]
 name = "pkg-config"

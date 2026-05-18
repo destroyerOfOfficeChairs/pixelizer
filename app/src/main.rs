@@ -22,7 +22,7 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "Pixelizer",
         native_options,
-        Box::new(|cc| Ok(Box::new(pixelizer::PixelizerApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(pixelizer_app::PixelizerApp::new(cc)))),
     )
 }
 
@@ -52,7 +52,7 @@ fn main() {
             .start(
                 canvas,
                 web_options,
-                Box::new(|cc| Ok(Box::new(eframe_template::PixelizerApp::new(cc)))),
+                Box::new(|cc| Ok(Box::new(pixelizer_app::PixelizerApp::new(cc)))),
             )
             .await;
 
