@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 pixelizer-core = { path = "../core" }
+serde_yaml = "0.9.34"
