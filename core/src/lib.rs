@@ -1,5 +1,7 @@
 pub use image;
+mod palette_map;
 use image::imageops;
+use palette_map::palette_map;
 
 pub type Image = image::RgbaImage;
 
@@ -49,7 +51,7 @@ pub fn apply(pipeline: &Pipeline, image: &Image) -> Image {
                 image = trim_width(*mode, image, pixel_size);
             }
             Operation::Downsample => image = downsample(image, pixel_size),
-            Operation::PaletteMap { colors: _ } => println!("palette map"),
+            Operation::PaletteMap { colors } => image = palette_map(image, colors),
             Operation::Upscale { factor } => image = upscale(image, *factor),
         }
     }
