@@ -1,6 +1,6 @@
 operations:
   - type: pixel_size
-    size: 32
+    size: 16
   - type: trim_height
     mode: both
   - type: trim_width
@@ -13,4 +13,4 @@ operations:
       - "#8bac0f"
       - "#9bbc0f"
   - type: upscale
-    factor: 32
+    factor: 16
