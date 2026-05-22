@@ -1,9 +1,22 @@
 pub use image;
+mod downsample;
 mod palette_map;
-use image::imageops;
+mod trim_height;
+mod trim_width;
+mod upscale;
+use downsample::downsample;
 use palette_map::palette_map;
+use trim_height::trim_height;
+use trim_width::trim_width;
+use upscale::upscale;
 
 pub type Image = image::RgbaImage;
+
+#[derive(Debug)]
+pub enum PixelizerError {
+    TrimError(String),
+    OrderError(String),
+}
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct Pipeline {
@@ -31,7 +44,7 @@ pub enum TrimMode {
     Both,
 }
 
-pub fn apply(pipeline: &Pipeline, image: &Image) -> Image {
+pub fn apply(pipeline: &Pipeline, image: &Image) -> Result<Image, PixelizerError> {
     let mut image: Image = image.clone();
     let mut pixel_size: u32 = 1;
 
@@ -39,81 +52,22 @@ pub fn apply(pipeline: &Pipeline, image: &Image) -> Image {
         match op {
             Operation::PixelSize { size } => {
                 if i != 0 {
-                    eprintln!("Setting pixel size must be the first operation.");
-                    std::process::exit(1);
+                    return Err(PixelizerError::OrderError(
+                        "Setting pixel size must be the first operation.".to_owned(),
+                    ));
                 }
                 pixel_size = *size;
             }
             Operation::TrimHeight { mode } => {
-                image = trim_height(*mode, image, pixel_size);
+                image = trim_height(*mode, image, pixel_size)?;
             }
             Operation::TrimWidth { mode } => {
-                image = trim_width(*mode, image, pixel_size);
+                image = trim_width(*mode, image, pixel_size)?;
             }
             Operation::Downsample => image = downsample(image, pixel_size),
             Operation::PaletteMap { colors } => image = palette_map(image, colors),
             Operation::Upscale { factor } => image = upscale(image, *factor),
         }
     }
-    image
-}
-
-fn trim_height(mode: TrimMode, mut image: Image, pixel_size: u32) -> Image {
-    let new_image_height: u32 = image.height() - (image.height() % pixel_size);
-    let trim_amount: u32 = image.height() - new_image_height;
-
-    let mut y_start: u32 = match mode {
-        TrimMode::Top => trim_amount,
-        TrimMode::Bottom => 0,
-        TrimMode::Both => trim_amount / 2, // rounds down; bottom keeps the extra row
-        _ => 0,
-    };
-
-    if trim_amount % 2 != 0 {
-        y_start += 1;
-    };
-
-    let width = image.width();
-    imageops::crop_imm(&mut image, 0, y_start, width, new_image_height).to_image()
-}
-
-fn trim_width(mode: TrimMode, mut image: Image, pixel_size: u32) -> Image {
-    let new_image_width: u32 = image.width() - (image.width() % pixel_size);
-    let trim_amount: u32 = image.width() - new_image_width;
-
-    let mut x_start: u32 = match mode {
-        TrimMode::Left => trim_amount,
-        TrimMode::Right => 0,
-        TrimMode::Both => trim_amount / 2,
-        _ => 0,
-    };
-
-    if trim_amount % 2 != 0 {
-        x_start += 1;
-    };
-
-    let height = image.height();
-    imageops::crop_imm(&mut image, x_start, 0, new_image_width, height).to_image()
-}
-
-fn downsample(mut image: Image, pixel_size: u32) -> Image {
-    let new_image_width: u32 = image.width() / pixel_size;
-    let new_image_height: u32 = image.height() / pixel_size;
-    imageops::resize(
-        &mut image,
-        new_image_width,
-        new_image_height,
-        imageops::FilterType::Nearest,
-    )
-}
-
-fn upscale(mut image: Image, factor: u32) -> Image {
-    let new_image_width: u32 = image.width() * factor;
-    let new_image_height: u32 = image.height() * factor;
-    imageops::resize(
-        &mut image,
-        new_image_width,
-        new_image_height,
-        imageops::FilterType::Nearest,
-    )
+    Ok(image)
 }

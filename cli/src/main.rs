@@ -1,3 +1,5 @@
+use pixelizer_core::PixelizerError;
+
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let pipeline_path = &args[1];
@@ -8,8 +10,14 @@ fn main() {
     let raw_pic = std::fs::read(input_path).expect("read image");
     let pipeline = make_pipeline(raw_yaml);
     let pic = make_pic(raw_pic);
-    let output = pixelizer_core::apply(&pipeline, &pic);
-    output.save(output_path).expect("save output");
+    let result = pixelizer_core::apply(&pipeline, &pic);
+    match result {
+        Ok(output) => output.save(output_path).expect("save output"),
+        Err(error) => match error {
+            PixelizerError::TrimError(e) => eprintln!("{}", e),
+            PixelizerError::OrderError(e) => eprintln!("{}", e),
+        },
+    }
 }
 
 fn make_pipeline(yaml: String) -> pixelizer_core::Pipeline {
