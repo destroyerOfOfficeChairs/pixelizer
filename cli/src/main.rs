@@ -19,6 +19,7 @@ fn main() {
             PixelizerError::OrderError(e) => eprintln!("{}", e),
             PixelizerError::HexParseError(e) => eprintln!("{}", e),
             PixelizerError::NoColorsError(e) => eprintln!("{}", e),
+            PixelizerError::PosterizeError(e) => eprintln!("{}", e),
         },
     }
 }

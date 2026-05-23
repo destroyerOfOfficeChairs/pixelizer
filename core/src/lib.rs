@@ -1,12 +1,16 @@
 pub use image;
+mod blur;
 mod color_utils;
 mod downsample;
 mod palette_map;
+mod posterize;
 mod trim_height;
 mod trim_width;
 mod upscale;
+use blur::blur;
 use downsample::downsample;
 use palette_map::palette_map;
+use posterize::posterize;
 use trim_height::trim_height;
 use trim_width::trim_width;
 use upscale::upscale;
@@ -19,6 +23,7 @@ pub enum PixelizerError {
     OrderError(String),
     HexParseError(String),
     NoColorsError(String),
+    PosterizeError(String),
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -46,6 +51,12 @@ pub enum Operation {
     },
     Upscale {
         factor: u32,
+    },
+    Posterize {
+        levels: u32,
+    },
+    Blur {
+        sigma: f32,
     },
 }
 
@@ -111,6 +122,8 @@ pub fn apply(pipeline: &Pipeline, mut image: Image) -> Result<Image, PixelizerEr
                 image = palette_map(image, colors, *dither)?
             }
             Operation::Upscale { factor } => image = upscale(image, *factor),
+            Operation::Posterize { levels } => image = posterize(image, *levels)?,
+            Operation::Blur { sigma } => image = blur(image, *sigma),
         }
     }
     Ok(image)
