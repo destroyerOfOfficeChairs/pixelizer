@@ -42,9 +42,7 @@ pub enum Operation {
     PaletteMap {
         colors: Vec<String>,
         #[serde(default)]
-        dither: Option<DitherKind>,
-        clamp: Option<bool>,
-        bleed: Option<f32>,
+        dither: Option<DitherConfig>,
     },
     Upscale {
         factor: u32,
@@ -53,10 +51,19 @@ pub enum Operation {
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
+pub struct DitherConfig {
+    pub kind: DitherKind,
+    #[serde(default)]
+    pub clamp: Option<bool>,
+    pub bleed: Option<f32>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
 pub enum DitherKind {
     FloydSteinberg,
     Atkinson,
-    JJND,
+    JJN,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
@@ -89,12 +96,9 @@ pub fn apply(pipeline: &Pipeline, mut image: Image) -> Result<Image, PixelizerEr
                 image = trim_width(*mode, image, pixel_size)?;
             }
             Operation::Downsample => image = downsample(image, pixel_size),
-            Operation::PaletteMap {
-                colors,
-                dither,
-                clamp,
-                bleed,
-            } => image = palette_map(image, colors, *dither, *clamp, *bleed)?,
+            Operation::PaletteMap { colors, dither } => {
+                image = palette_map(image, colors, *dither)?
+            }
             Operation::Upscale { factor } => image = upscale(image, *factor),
         }
     }

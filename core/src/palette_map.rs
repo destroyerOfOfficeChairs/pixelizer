@@ -1,3 +1,4 @@
+use crate::DitherConfig;
 use crate::DitherKind;
 use crate::Image;
 use crate::PixelizerError::NoColorsError;
@@ -26,7 +27,7 @@ const ATKINSON: &[(i32, i32, f32)] = &[
     (0, 2, 1.0 / 8.0),
 ];
 
-const JJND: &[(i32, i32, f32)] = &[
+const JJN: &[(i32, i32, f32)] = &[
     (1, 0, 7.0 / 48.0),
     (2, 0, 5.0 / 48.0),
     (-2, 1, 3.0 / 48.0),
@@ -44,20 +45,10 @@ const JJND: &[(i32, i32, f32)] = &[
 pub fn palette_map(
     image: Image,
     colors: &[String],
-    dither: Option<DitherKind>,
-    clamp: Option<bool>,
-    bleed: Option<f32>,
+    dither: Option<DitherConfig>,
 ) -> Result<Image, crate::PixelizerError> {
-    let mut error_damping = 1.0;
-    if let Some(foo) = bleed {
-        error_damping = foo;
-    }
-    let mut clamped = false;
-    if let Some(foo) = clamp {
-        clamped = foo;
-    }
-    if let Some(dither_algorithm) = dither {
-        return palette_map_dithered(&image, colors, dither_algorithm, clamped, error_damping);
+    if let Some(dither_config) = dither {
+        return palette_map_dithered(&image, colors, dither_config);
     };
 
     let palette_rgb: Vec<[u8; 3]> = colors
@@ -96,9 +87,7 @@ pub fn palette_map(
 pub fn palette_map_dithered(
     image: &Image,
     colors: &[String],
-    dither_algorithm: DitherKind,
-    clamp: bool,
-    error_damping: f32,
+    dither_config: DitherConfig,
 ) -> Result<Image, crate::PixelizerError> {
     let palette_rgb: Vec<[u8; 3]> = colors
         .iter()
@@ -155,10 +144,20 @@ pub fn palette_map_dithered(
     let idx = |x: u32, y: u32| (y * w + x) as usize;
 
     // There's probably some more elegant way to do this.
-    let alg = match dither_algorithm {
+    let alg = match dither_config.kind {
         DitherKind::Atkinson => ATKINSON,
         DitherKind::FloydSteinberg => FLOYD_STEINBERG,
-        DitherKind::JJND => JJND,
+        DitherKind::JJN => JJN,
+    };
+
+    let mut clamp = false;
+    if let Some(foo) = dither_config.clamp {
+        clamp = foo;
+    };
+
+    let mut error_damping = 1.0;
+    if let Some(foo) = dither_config.bleed {
+        error_damping = foo;
     };
 
     for y in 0..h {

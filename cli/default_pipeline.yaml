@@ -11,11 +11,12 @@ operations:
       - "#306230"
       - "#8bac0f"
       - "#9bbc0f"
-    # dither: atkinson
-    # dither: floyd_steinberg
-    dither: j_j_n_d
-    clamp: true
-    bleed: 0.2
+    dither:
+      kind: atkinson
+      # kind: floyd_steinberg
+      # kind: j_j_n
+      clamp: true
+      bleed: 0.2
   - type: downsample
   - type: upscale
     factor: 16
