@@ -5,13 +5,13 @@ operations:
     mode: both
   - type: trim_width
     mode: both
-  - type: downsample
   - type: palette_map
     colors:
       - "#0f380f"
       - "#306230"
       - "#8bac0f"
       - "#9bbc0f"
-    dither: false
+    dither: atkinson
+  - type: downsample
   - type: upscale
     factor: 16

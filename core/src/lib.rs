@@ -42,11 +42,18 @@ pub enum Operation {
     PaletteMap {
         colors: Vec<String>,
         #[serde(default)]
-        dither: bool,
+        dither: Option<DitherKind>,
     },
     Upscale {
         factor: u32,
     },
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub enum DitherKind {
+    FloydSteinberg,
+    Atkinson,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
