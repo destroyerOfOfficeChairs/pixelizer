@@ -143,22 +143,14 @@ pub fn palette_map_dithered(
 
     let idx = |x: u32, y: u32| (y * w + x) as usize;
 
-    // There's probably some more elegant way to do this.
     let alg = match dither_config.kind {
         DitherKind::Atkinson => ATKINSON,
         DitherKind::FloydSteinberg => FLOYD_STEINBERG,
         DitherKind::JJN => JJN,
     };
 
-    let mut clamp = false;
-    if let Some(foo) = dither_config.clamp {
-        clamp = foo;
-    };
-
-    let mut error_damping = 1.0;
-    if let Some(foo) = dither_config.bleed {
-        error_damping = foo;
-    };
+    let clamp = dither_config.clamp;
+    let error_damping = dither_config.bleed;
 
     for y in 0..h {
         let ltr = y % 2 == 0;

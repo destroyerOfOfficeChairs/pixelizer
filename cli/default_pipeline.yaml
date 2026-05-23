@@ -14,9 +14,9 @@ operations:
     dither:
       kind: atkinson
       # kind: floyd_steinberg
-      # kind: j_j_n
-      clamp: true
-      bleed: 0.2
+      # kind: Jjn
+      # clamp: true
+      bleed: 0.1
   - type: downsample
   - type: upscale
     factor: 16

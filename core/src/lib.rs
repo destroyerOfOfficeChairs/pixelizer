@@ -52,10 +52,20 @@ pub enum Operation {
 #[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub struct DitherConfig {
+    #[serde(default = "default_kind")]
     pub kind: DitherKind,
     #[serde(default)]
-    pub clamp: Option<bool>,
-    pub bleed: Option<f32>,
+    pub clamp: bool,
+    #[serde(default = "default_bleed")]
+    pub bleed: f32,
+}
+
+fn default_kind() -> DitherKind {
+    DitherKind::FloydSteinberg
+}
+
+fn default_bleed() -> f32 {
+    1.0
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
@@ -63,6 +73,7 @@ pub struct DitherConfig {
 pub enum DitherKind {
     FloydSteinberg,
     Atkinson,
+    #[serde(rename = "Jjn")]
     JJN,
 }
 
