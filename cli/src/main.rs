@@ -16,6 +16,8 @@ fn main() {
         Err(error) => match error {
             PixelizerError::TrimError(e) => eprintln!("{}", e),
             PixelizerError::OrderError(e) => eprintln!("{}", e),
+            PixelizerError::HexParseError(e) => eprintln!("{}", e),
+            PixelizerError::NoColorsError(e) => eprintln!("{}", e),
         },
     }
 }

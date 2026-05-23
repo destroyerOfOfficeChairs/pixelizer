@@ -16,6 +16,8 @@ pub type Image = image::RgbaImage;
 pub enum PixelizerError {
     TrimError(String),
     OrderError(String),
+    HexParseError(String),
+    NoColorsError(String),
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -65,7 +67,7 @@ pub fn apply(pipeline: &Pipeline, image: &Image) -> Result<Image, PixelizerError
                 image = trim_width(*mode, image, pixel_size)?;
             }
             Operation::Downsample => image = downsample(image, pixel_size),
-            Operation::PaletteMap { colors } => image = palette_map(image, colors),
+            Operation::PaletteMap { colors } => image = palette_map(image, colors)?,
             Operation::Upscale { factor } => image = upscale(image, *factor),
         }
     }

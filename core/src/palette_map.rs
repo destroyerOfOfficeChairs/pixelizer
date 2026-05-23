@@ -1,4 +1,6 @@
 use crate::Image;
+use crate::PixelizerError::HexParseError;
+use crate::PixelizerError::NoColorsError;
 
 #[derive(Clone, Copy)]
 struct Oklab {
@@ -7,15 +9,23 @@ struct Oklab {
     b: f32,
 }
 
-fn parse_hex(s: &str) -> Option<[u8; 3]> {
+fn parse_hex(s: &str) -> Result<[u8; 3], crate::PixelizerError> {
     let s = s.strip_prefix('#').unwrap_or(s);
+
     if s.len() != 6 {
-        return None;
+        return Err(HexParseError("This is not a hex color.".to_owned()));
     }
-    let r = u8::from_str_radix(&s[0..2], 16).ok()?;
-    let g = u8::from_str_radix(&s[2..4], 16).ok()?;
-    let b = u8::from_str_radix(&s[4..6], 16).ok()?;
-    Some([r, g, b])
+
+    let r = u8::from_str_radix(&s[0..2], 16)
+        .map_err(|_| HexParseError("Red is malformed.".to_owned()))?;
+
+    let g = u8::from_str_radix(&s[2..4], 16)
+        .map_err(|_| HexParseError("Green is malformed.".to_owned()))?;
+
+    let b = u8::from_str_radix(&s[4..6], 16)
+        .map_err(|_| HexParseError("Blue is malformed.".to_owned()))?;
+
+    Ok([r, g, b])
 }
 
 fn srgb_to_linear(c: u8) -> f32 {
@@ -50,15 +60,16 @@ fn rgb_to_oklab(r: u8, g: u8, b: u8) -> Oklab {
     }
 }
 
-pub fn palette_map(image: Image, colors: &[String]) -> Image {
+pub fn palette_map(image: Image, colors: &[String]) -> Result<Image, crate::PixelizerError> {
     let palette_rgb: Vec<[u8; 3]> = colors
         .iter()
-        .map(|s| parse_hex(s).expect("invalid palette color"))
-        .collect();
+        .map(|s| parse_hex(s))
+        .collect::<Result<_, _>>()?;
 
     if palette_rgb.is_empty() {
-        eprintln!("Palette is empty.");
-        std::process::exit(1);
+        return Err(NoColorsError(
+            "There are no colors in the palette.".to_owned(),
+        ));
     }
 
     // Precompute OkLab once per palette entry.
@@ -76,7 +87,7 @@ pub fn palette_map(image: Image, colors: &[String]) -> Image {
         let [pr, pg, pb] = palette_rgb[idx];
         out.put_pixel(x, y, image::Rgba([pr, pg, pb, a]));
     }
-    out
+    Ok(out)
 }
 
 fn nearest_oklab(palette: &[Oklab], target: Oklab) -> usize {
