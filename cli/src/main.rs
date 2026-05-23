@@ -13,6 +13,7 @@ fn main() {
     let result = pixelizer_core::apply(&pipeline, pic);
     match result {
         Ok(output) => output.save(output_path).expect("save output"),
+        // Apparently, using thiserror could clean this up.
         Err(error) => match error {
             PixelizerError::TrimError(e) => eprintln!("{}", e),
             PixelizerError::OrderError(e) => eprintln!("{}", e),

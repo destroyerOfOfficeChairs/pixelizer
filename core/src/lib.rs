@@ -73,7 +73,7 @@ fn default_bleed() -> f32 {
 pub enum DitherKind {
     FloydSteinberg,
     Atkinson,
-    #[serde(rename = "Jjn")]
+    #[serde(rename = "jjn")]
     JJN,
 }
 

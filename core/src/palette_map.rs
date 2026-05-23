@@ -3,6 +3,7 @@ use crate::DitherKind;
 use crate::Image;
 use std::collections::HashMap;
 
+use crate::color_utils::PaletteData;
 use crate::color_utils::nearest_oklab;
 use crate::color_utils::prepare_palette;
 use crate::color_utils::quantize;
@@ -49,9 +50,12 @@ pub fn palette_map(
         return palette_map_dithered(&image, colors, dither_config);
     };
 
-    let palette_data = prepare_palette(colors).unwrap();
-    let palette_rgb = palette_data.rgb;
-    let palette_lab = palette_data.lab;
+    let PaletteData {
+        rgb,
+        lab,
+        linear: _,
+        max_per_channel: _,
+    } = prepare_palette(colors)?;
 
     let (w, h) = image.dimensions();
     let mut out = Image::new(w, h);
@@ -62,8 +66,8 @@ pub fn palette_map(
         let [r, g, b, a] = pixel.0;
         let idx = *cache
             .entry([r, g, b])
-            .or_insert_with(|| nearest_oklab(&palette_lab, rgb_to_oklab(r, g, b)));
-        let [pr, pg, pb] = palette_rgb[idx];
+            .or_insert_with(|| nearest_oklab(&lab, rgb_to_oklab(r, g, b)));
+        let [pr, pg, pb] = rgb[idx];
         out.put_pixel(x, y, image::Rgba([pr, pg, pb, a]));
     }
     Ok(out)
@@ -74,11 +78,12 @@ pub fn palette_map_dithered(
     colors: &[String],
     dither_config: DitherConfig,
 ) -> Result<Image, crate::PixelizerError> {
-    let palette_data = prepare_palette(colors).unwrap();
-    let palette_rgb = palette_data.rgb;
-    let palette_lab = palette_data.lab;
-    let palette_linear = palette_data.linear;
-    let max_per_channel = palette_data.max_per_channel;
+    let PaletteData {
+        rgb,
+        lab,
+        linear,
+        max_per_channel,
+    } = prepare_palette(colors)?;
 
     let (w, h) = image.dimensions();
 
@@ -128,8 +133,8 @@ pub fn palette_map_dithered(
             } else {
                 buf[idx(x, y)]
             };
-            let (pal_idx, error) = quantize(&palette_lab, &palette_linear, pixel, error_damping);
-            let [pr, pg, pb] = palette_rgb[pal_idx];
+            let (pal_idx, error) = quantize(&lab, &linear, pixel, error_damping);
+            let [pr, pg, pb] = rgb[pal_idx];
             out.put_pixel(x, y, image::Rgba([pr, pg, pb, alpha[idx(x, y)]]));
 
             for &(dx, dy, weight) in alg {
