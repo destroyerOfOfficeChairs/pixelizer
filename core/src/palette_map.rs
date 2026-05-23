@@ -31,13 +31,18 @@ pub fn palette_map(
     colors: &[String],
     dither: Option<DitherKind>,
     clamp: Option<bool>,
+    bleed: Option<f32>,
 ) -> Result<Image, crate::PixelizerError> {
+    let mut error_damping = 1.0;
+    if let Some(foo) = bleed {
+        error_damping = foo;
+    }
     let mut clamped = false;
     if let Some(foo) = clamp {
         clamped = foo;
     }
     if let Some(dither_algorithm) = dither {
-        return palette_map_dithered(&image, colors, dither_algorithm, clamped);
+        return palette_map_dithered(&image, colors, dither_algorithm, clamped, error_damping);
     };
 
     let palette_rgb: Vec<[u8; 3]> = colors
@@ -78,6 +83,7 @@ pub fn palette_map_dithered(
     colors: &[String],
     dither_algorithm: DitherKind,
     clamp: bool,
+    error_damping: f32,
 ) -> Result<Image, crate::PixelizerError> {
     let palette_rgb: Vec<[u8; 3]> = colors
         .iter()
@@ -159,7 +165,7 @@ pub fn palette_map_dithered(
             } else {
                 buf[idx(x, y)]
             };
-            let (pal_idx, error) = quantize(&palette_lab, &palette_linear, pixel);
+            let (pal_idx, error) = quantize(&palette_lab, &palette_linear, pixel, error_damping);
             let [pr, pg, pb] = palette_rgb[pal_idx];
             out.put_pixel(x, y, image::Rgba([pr, pg, pb, alpha[idx(x, y)]]));
 

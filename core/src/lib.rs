@@ -44,6 +44,7 @@ pub enum Operation {
         #[serde(default)]
         dither: Option<DitherKind>,
         clamp: Option<bool>,
+        bleed: Option<f32>,
     },
     Upscale {
         factor: u32,
@@ -91,7 +92,8 @@ pub fn apply(pipeline: &Pipeline, mut image: Image) -> Result<Image, PixelizerEr
                 colors,
                 dither,
                 clamp,
-            } => image = palette_map(image, colors, *dither, *clamp)?,
+                bleed,
+            } => image = palette_map(image, colors, *dither, *clamp, *bleed)?,
             Operation::Upscale { factor } => image = upscale(image, *factor),
         }
     }

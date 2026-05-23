@@ -11,9 +11,10 @@ operations:
       - "#306230"
       - "#8bac0f"
       - "#9bbc0f"
-    # dither: atkinson
+    dither: atkinson
     # dither: floyd_steinberg
-    # clamp: true
+    clamp: true
+    bleed: 0.1
   - type: downsample
   - type: upscale
     factor: 16

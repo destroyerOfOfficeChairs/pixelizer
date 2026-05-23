@@ -83,6 +83,7 @@ pub fn quantize(
     palette_lab: &[Oklab],
     palette_linear: &[[f32; 3]],
     pixel_linear: [f32; 3],
+    error_damping: f32,
 ) -> (usize, [f32; 3]) {
     let [lr, lg, lb] = pixel_linear;
     let r_u8 = linear_to_srgb(lr);
@@ -90,5 +91,12 @@ pub fn quantize(
     let b_u8 = linear_to_srgb(lb);
     let idx = nearest_oklab(palette_lab, rgb_to_oklab(r_u8, g_u8, b_u8));
     let [plr, plg, plb] = palette_linear[idx];
-    (idx, [lr - plr, lg - plg, lb - plb])
+    (
+        idx,
+        [
+            (lr - plr) * error_damping,
+            (lg - plg) * error_damping,
+            (lb - plb) * error_damping,
+        ],
+    )
 }
