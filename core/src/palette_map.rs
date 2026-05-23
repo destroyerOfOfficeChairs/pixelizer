@@ -30,9 +30,14 @@ pub fn palette_map(
     image: Image,
     colors: &[String],
     dither: Option<DitherKind>,
+    clamp: Option<bool>,
 ) -> Result<Image, crate::PixelizerError> {
+    let mut clamped = false;
+    if let Some(foo) = clamp {
+        clamped = foo;
+    }
     if let Some(dither_algorithm) = dither {
-        return palette_map_dithered(&image, colors, dither_algorithm);
+        return palette_map_dithered(&image, colors, dither_algorithm, clamped);
     };
 
     let palette_rgb: Vec<[u8; 3]> = colors
@@ -72,6 +77,7 @@ pub fn palette_map_dithered(
     image: &Image,
     colors: &[String],
     dither_algorithm: DitherKind,
+    clamp: bool,
 ) -> Result<Image, crate::PixelizerError> {
     let palette_rgb: Vec<[u8; 3]> = colors
         .iter()
@@ -100,6 +106,13 @@ pub fn palette_map_dithered(
             ]
         })
         .collect();
+
+    let mut max_per_channel = [0.0_f32; 3];
+    for &[lr, lg, lb] in &palette_linear {
+        max_per_channel[0] = max_per_channel[0].max(lr);
+        max_per_channel[1] = max_per_channel[1].max(lg);
+        max_per_channel[2] = max_per_channel[2].max(lb);
+    }
 
     let (w, h) = image.dimensions();
 
@@ -136,7 +149,17 @@ pub fn palette_map_dithered(
         };
 
         for x in xs {
-            let (pal_idx, error) = quantize(&palette_lab, &palette_linear, buf[idx(x, y)]);
+            let pixel = if clamp {
+                let p = buf[idx(x, y)];
+                [
+                    p[0].clamp(0.0, max_per_channel[0]),
+                    p[1].clamp(0.0, max_per_channel[1]),
+                    p[2].clamp(0.0, max_per_channel[2]),
+                ]
+            } else {
+                buf[idx(x, y)]
+            };
+            let (pal_idx, error) = quantize(&palette_lab, &palette_linear, pixel);
             let [pr, pg, pb] = palette_rgb[pal_idx];
             out.put_pixel(x, y, image::Rgba([pr, pg, pb, alpha[idx(x, y)]]));
 

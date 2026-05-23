@@ -43,6 +43,7 @@ pub enum Operation {
         colors: Vec<String>,
         #[serde(default)]
         dither: Option<DitherKind>,
+        clamp: Option<bool>,
     },
     Upscale {
         factor: u32,
@@ -86,9 +87,11 @@ pub fn apply(pipeline: &Pipeline, mut image: Image) -> Result<Image, PixelizerEr
                 image = trim_width(*mode, image, pixel_size)?;
             }
             Operation::Downsample => image = downsample(image, pixel_size),
-            Operation::PaletteMap { colors, dither } => {
-                image = palette_map(image, colors, *dither)?
-            }
+            Operation::PaletteMap {
+                colors,
+                dither,
+                clamp,
+            } => image = palette_map(image, colors, *dither, *clamp)?,
             Operation::Upscale { factor } => image = upscale(image, *factor),
         }
     }
