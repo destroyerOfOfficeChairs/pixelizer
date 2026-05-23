@@ -56,6 +56,7 @@ pub enum Operation {
 pub enum DitherKind {
     FloydSteinberg,
     Atkinson,
+    JJND,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]

@@ -26,6 +26,21 @@ const ATKINSON: &[(i32, i32, f32)] = &[
     (0, 2, 1.0 / 8.0),
 ];
 
+const JJND: &[(i32, i32, f32)] = &[
+    (1, 0, 7.0 / 48.0),
+    (2, 0, 5.0 / 48.0),
+    (-2, 1, 3.0 / 48.0),
+    (-1, 1, 5.0 / 48.0),
+    (0, 1, 7.0 / 48.0),
+    (1, 1, 5.0 / 48.0),
+    (2, 1, 3.0 / 48.0),
+    (-2, 2, 1.0 / 48.0),
+    (-1, 2, 3.0 / 48.0),
+    (0, 2, 5.0 / 48.0),
+    (1, 2, 3.0 / 48.0),
+    (2, 2, 1.0 / 48.0),
+];
+
 pub fn palette_map(
     image: Image,
     colors: &[String],
@@ -143,6 +158,7 @@ pub fn palette_map_dithered(
     let alg = match dither_algorithm {
         DitherKind::Atkinson => ATKINSON,
         DitherKind::FloydSteinberg => FLOYD_STEINBERG,
+        DitherKind::JJND => JJND,
     };
 
     for y in 0..h {
