@@ -1,12 +1,10 @@
 use crate::DitherConfig;
 use crate::DitherKind;
 use crate::Image;
-use crate::PixelizerError::NoColorsError;
 use std::collections::HashMap;
 
-use crate::color_utils::Oklab;
 use crate::color_utils::nearest_oklab;
-use crate::color_utils::parse_hex;
+use crate::color_utils::prepare_palette;
 use crate::color_utils::quantize;
 use crate::color_utils::rgb_to_oklab;
 use crate::color_utils::srgb_to_linear;
@@ -51,22 +49,9 @@ pub fn palette_map(
         return palette_map_dithered(&image, colors, dither_config);
     };
 
-    let palette_rgb: Vec<[u8; 3]> = colors
-        .iter()
-        .map(|s| parse_hex(s))
-        .collect::<Result<_, _>>()?;
-
-    if palette_rgb.is_empty() {
-        return Err(NoColorsError(
-            "There are no colors in the palette.".to_owned(),
-        ));
-    }
-
-    // Precompute OkLab once per palette entry.
-    let palette_lab: Vec<Oklab> = palette_rgb
-        .iter()
-        .map(|c| rgb_to_oklab(c[0], c[1], c[2]))
-        .collect();
+    let palette_data = prepare_palette(colors).unwrap();
+    let palette_rgb = palette_data.rgb;
+    let palette_lab = palette_data.lab;
 
     let (w, h) = image.dimensions();
     let mut out = Image::new(w, h);
@@ -89,40 +74,11 @@ pub fn palette_map_dithered(
     colors: &[String],
     dither_config: DitherConfig,
 ) -> Result<Image, crate::PixelizerError> {
-    let palette_rgb: Vec<[u8; 3]> = colors
-        .iter()
-        .map(|s| parse_hex(s))
-        .collect::<Result<_, _>>()?;
-
-    if palette_rgb.is_empty() {
-        return Err(NoColorsError(
-            "There are no colors in the palette.".to_owned(),
-        ));
-    }
-
-    let palette_lab: Vec<Oklab> = palette_rgb
-        .iter()
-        .map(|c| rgb_to_oklab(c[0], c[1], c[2]))
-        .collect();
-
-    // Precompute palette in linear RGB for error math.
-    let palette_linear: Vec<[f32; 3]> = palette_rgb
-        .iter()
-        .map(|c| {
-            [
-                srgb_to_linear(c[0]),
-                srgb_to_linear(c[1]),
-                srgb_to_linear(c[2]),
-            ]
-        })
-        .collect();
-
-    let mut max_per_channel = [0.0_f32; 3];
-    for &[lr, lg, lb] in &palette_linear {
-        max_per_channel[0] = max_per_channel[0].max(lr);
-        max_per_channel[1] = max_per_channel[1].max(lg);
-        max_per_channel[2] = max_per_channel[2].max(lb);
-    }
+    let palette_data = prepare_palette(colors).unwrap();
+    let palette_rgb = palette_data.rgb;
+    let palette_lab = palette_data.lab;
+    let palette_linear = palette_data.linear;
+    let max_per_channel = palette_data.max_per_channel;
 
     let (w, h) = image.dimensions();
 

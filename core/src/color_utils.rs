@@ -1,10 +1,54 @@
 use crate::PixelizerError::HexParseError;
+use crate::PixelizerError::NoColorsError;
 #[derive(Clone, Copy)]
 pub struct Oklab {
     l: f32,
     a: f32,
     b: f32,
 }
+
+pub struct PaletteData {
+    pub rgb: Vec<[u8; 3]>,
+    pub lab: Vec<Oklab>,
+    pub linear: Vec<[f32; 3]>,
+    pub max_per_channel: [f32; 3],
+}
+
+pub fn prepare_palette(colors: &[String]) -> Result<PaletteData, crate::PixelizerError> {
+    let rgb: Vec<[u8; 3]> = colors
+        .iter()
+        .map(|s| parse_hex(s))
+        .collect::<Result<_, _>>()?;
+    if rgb.is_empty() {
+        return Err(NoColorsError(
+            "There are no colors in the palette.".to_owned(),
+        ));
+    }
+    let lab: Vec<Oklab> = rgb.iter().map(|c| rgb_to_oklab(c[0], c[1], c[2])).collect();
+    let linear: Vec<[f32; 3]> = rgb
+        .iter()
+        .map(|c| {
+            [
+                srgb_to_linear(c[0]),
+                srgb_to_linear(c[1]),
+                srgb_to_linear(c[2]),
+            ]
+        })
+        .collect();
+    let mut max_per_channel = [0.0_f32; 3];
+    for &[lr, lg, lb] in &linear {
+        max_per_channel[0] = max_per_channel[0].max(lr);
+        max_per_channel[1] = max_per_channel[1].max(lg);
+        max_per_channel[2] = max_per_channel[2].max(lb);
+    }
+    Ok(PaletteData {
+        rgb,
+        lab,
+        linear,
+        max_per_channel,
+    })
+}
+
 pub fn parse_hex(s: &str) -> Result<[u8; 3], crate::PixelizerError> {
     let s = s.strip_prefix('#').unwrap_or(s);
 
