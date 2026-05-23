@@ -46,8 +46,7 @@ pub enum TrimMode {
     Both,
 }
 
-pub fn apply(pipeline: &Pipeline, image: &Image) -> Result<Image, PixelizerError> {
-    let mut image: Image = image.clone();
+pub fn apply(pipeline: &Pipeline, mut image: Image) -> Result<Image, PixelizerError> {
     let mut pixel_size: u32 = 1;
 
     for (i, op) in pipeline.operations.iter().enumerate() {

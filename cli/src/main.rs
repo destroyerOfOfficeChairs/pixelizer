@@ -10,7 +10,7 @@ fn main() {
     let raw_pic = std::fs::read(input_path).expect("read image");
     let pipeline = make_pipeline(raw_yaml);
     let pic = make_pic(raw_pic);
-    let result = pixelizer_core::apply(&pipeline, &pic);
+    let result = pixelizer_core::apply(&pipeline, pic);
     match result {
         Ok(output) => output.save(output_path).expect("save output"),
         Err(error) => match error {

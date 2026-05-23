@@ -1,6 +1,7 @@
 use crate::Image;
 use crate::PixelizerError::HexParseError;
 use crate::PixelizerError::NoColorsError;
+use std::collections::HashMap;
 
 #[derive(Clone, Copy)]
 struct Oklab {
@@ -81,9 +82,13 @@ pub fn palette_map(image: Image, colors: &[String]) -> Result<Image, crate::Pixe
     let (w, h) = image.dimensions();
     let mut out = Image::new(w, h);
 
+    let mut cache: HashMap<[u8; 3], usize> = HashMap::new();
+
     for (x, y, pixel) in image.enumerate_pixels() {
         let [r, g, b, a] = pixel.0;
-        let idx = nearest_oklab(&palette_lab, rgb_to_oklab(r, g, b));
+        let idx = *cache
+            .entry([r, g, b])
+            .or_insert_with(|| nearest_oklab(&palette_lab, rgb_to_oklab(r, g, b)));
         let [pr, pg, pb] = palette_rgb[idx];
         out.put_pixel(x, y, image::Rgba([pr, pg, pb, a]));
     }
