@@ -12,5 +12,6 @@ operations:
       - "#306230"
       - "#8bac0f"
       - "#9bbc0f"
+    dither: false
   - type: upscale
     factor: 16

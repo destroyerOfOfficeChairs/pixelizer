@@ -1,4 +1,5 @@
 pub use image;
+mod color_utils;
 mod downsample;
 mod palette_map;
 mod trim_height;
@@ -28,12 +29,24 @@ pub struct Pipeline {
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Operation {
-    PixelSize { size: u32 },
-    TrimHeight { mode: TrimMode },
-    TrimWidth { mode: TrimMode },
+    PixelSize {
+        size: u32,
+    },
+    TrimHeight {
+        mode: TrimMode,
+    },
+    TrimWidth {
+        mode: TrimMode,
+    },
     Downsample,
-    PaletteMap { colors: Vec<String> },
-    Upscale { factor: u32 },
+    PaletteMap {
+        colors: Vec<String>,
+        #[serde(default)]
+        dither: bool,
+    },
+    Upscale {
+        factor: u32,
+    },
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
@@ -66,7 +79,9 @@ pub fn apply(pipeline: &Pipeline, mut image: Image) -> Result<Image, PixelizerEr
                 image = trim_width(*mode, image, pixel_size)?;
             }
             Operation::Downsample => image = downsample(image, pixel_size),
-            Operation::PaletteMap { colors } => image = palette_map(image, colors)?,
+            Operation::PaletteMap { colors, dither } => {
+                image = palette_map(image, colors, *dither)?
+            }
             Operation::Upscale { factor } => image = upscale(image, *factor),
         }
     }
