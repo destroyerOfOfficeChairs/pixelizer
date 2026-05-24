@@ -74,7 +74,7 @@ pub fn palette_map(
 }
 
 pub fn palette_map_dithered(
-    image: &Image,
+    img: &Image,
     colors: &[String],
     dither_config: DitherConfig,
 ) -> Result<Image, crate::PixelizerError> {
@@ -85,10 +85,10 @@ pub fn palette_map_dithered(
         max_per_channel,
     } = prepare_palette(colors)?;
 
-    let (w, h) = image.dimensions();
+    let (w, h) = img.dimensions();
 
     // Working buffer in LINEAR light, not sRGB.
-    let mut buf: Vec<[f32; 3]> = image
+    let mut buf: Vec<[f32; 3]> = img
         .pixels()
         .map(|p| {
             [
@@ -99,7 +99,7 @@ pub fn palette_map_dithered(
         })
         .collect();
 
-    let alpha: Vec<u8> = image.pixels().map(|p| p.0[3]).collect();
+    let alpha: Vec<u8> = img.pixels().map(|p| p.0[3]).collect();
     let mut out = Image::new(w, h);
 
     let idx = |x: u32, y: u32| (y * w + x) as usize;

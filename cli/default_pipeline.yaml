@@ -1,6 +1,6 @@
 operations:
   - type: pixel_size
-    size: 8
+    size: 16
   - type: trim_height
     mode: both
   - type: trim_width
@@ -44,7 +44,7 @@ operations:
       # kind: floyd_steinberg
       # kind: jjn
       # clamp: true
-      bleed: 0.1
+      bleed: 0.2
   - type: downsample
   - type: upscale
-    factor: 8
+    factor: 16
