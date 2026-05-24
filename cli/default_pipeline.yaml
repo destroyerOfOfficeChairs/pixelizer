@@ -9,6 +9,7 @@ operations:
     levels: 5
   - type: blur
     sigma: 4.0
+  - type: downsample
   - type: palette_map
     # colors:
     #   - "#0f380f"
@@ -40,11 +41,10 @@ operations:
     #   - "#ff77a8"
     #   - "#ffccaa"
     dither:
-      kind: atkinson
+      # kind: atkinson
       # kind: floyd_steinberg
-      # kind: jjn
-      # clamp: true
-      bleed: 0.2
-  - type: downsample
+      kind: jjn
+      clamp: true
+      # bleed: 0.2
   - type: upscale
     factor: 16
