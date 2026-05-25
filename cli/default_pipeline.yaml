@@ -11,11 +11,6 @@ operations:
     sigma: 4.0
   - type: downsample
   - type: palette_map
-    # colors:
-    #   - "#0f380f"
-    #   - "#306230"
-    #   - "#8bac0f"
-    #   - "#9bbc0f"
     colors:
       - "#2c2416"
       - "#6e5a3d"
@@ -23,28 +18,12 @@ operations:
       - "#c4a875"
       - "#d4b896"
       - "#e8d5a8"
-    # colors:
-    #   - "#000000"
-    #   - "#1d2b53"
-    #   - "#7e2553"
-    #   - "#008751"
-    #   - "#ab5236"
-    #   - "#5f574f"
-    #   - "#c2c3c7"
-    #   - "#fff1e8"
-    #   - "#ff004d"
-    #   - "#ffa300"
-    #   - "#ffec27"
-    #   - "#00e436"
-    #   - "#29adff"
-    #   - "#83769c"
-    #   - "#ff77a8"
-    #   - "#ffccaa"
+    # dither:
+    #   algorithm: atkinson
+    #   bleed: 0.2
+    #   clamp: false
     dither:
-      # kind: atkinson
-      # kind: floyd_steinberg
-      kind: jjn
-      clamp: true
-      # bleed: 0.2
+      algorithm: bayer8
+      strength: 32.0
   - type: upscale
     factor: 16

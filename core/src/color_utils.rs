@@ -7,6 +7,11 @@ pub struct Oklab {
     b: f32,
 }
 
+pub enum BayerMatrix<'a> {
+    Four(&'a [[f32; 4]; 4]),
+    Eight(&'a [[f32; 8]; 8]),
+}
+
 pub struct PaletteData {
     pub rgb: Vec<[u8; 3]>,
     pub lab: Vec<Oklab>,

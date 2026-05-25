@@ -17,6 +17,45 @@ use upscale::upscale;
 
 pub type Image = image::RgbaImage;
 
+#[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
+#[serde(tag = "algorithm", rename_all = "snake_case")]
+pub enum DitherConfig {
+    FloydSteinberg {
+        #[serde(default = "default_bleed")]
+        bleed: f32,
+        #[serde(default)]
+        clamp: bool,
+    },
+    Atkinson {
+        #[serde(default = "default_bleed")]
+        bleed: f32,
+        #[serde(default)]
+        clamp: bool,
+    },
+    #[serde(rename = "jjn")]
+    Jjn {
+        #[serde(default = "default_bleed")]
+        bleed: f32,
+        #[serde(default)]
+        clamp: bool,
+    },
+    Bayer4 {
+        #[serde(default = "default_strength")]
+        strength: f32,
+    },
+    Bayer8 {
+        #[serde(default = "default_strength")]
+        strength: f32,
+    },
+}
+
+fn default_bleed() -> f32 {
+    1.0
+}
+fn default_strength() -> f32 {
+    32.0
+}
+
 #[derive(Debug)]
 pub enum PixelizerError {
     TrimError(String),
@@ -58,34 +97,6 @@ pub enum Operation {
     Blur {
         sigma: f32,
     },
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
-#[serde(rename_all = "snake_case")]
-pub struct DitherConfig {
-    #[serde(default = "default_kind")]
-    pub kind: DitherKind,
-    #[serde(default)]
-    pub clamp: bool,
-    #[serde(default = "default_bleed")]
-    pub bleed: f32,
-}
-
-fn default_kind() -> DitherKind {
-    DitherKind::FloydSteinberg
-}
-
-fn default_bleed() -> f32 {
-    1.0
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
-#[serde(rename_all = "snake_case")]
-pub enum DitherKind {
-    FloydSteinberg,
-    Atkinson,
-    #[serde(rename = "jjn")]
-    JJN,
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]

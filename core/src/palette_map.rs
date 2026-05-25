@@ -1,8 +1,9 @@
 use crate::DitherConfig;
-use crate::DitherKind;
 use crate::Image;
 use std::collections::HashMap;
 
+use crate::color_utils::BayerMatrix;
+use crate::color_utils::Oklab;
 use crate::color_utils::PaletteData;
 use crate::color_utils::nearest_oklab;
 use crate::color_utils::prepare_palette;
@@ -41,22 +42,103 @@ const JJN: &[(i32, i32, f32)] = &[
     (2, 2, 1.0 / 48.0),
 ];
 
+// 4x4 Bayer matrix, normalized to [-0.5, 0.5) range
+const BAYER_4X4: [[f32; 4]; 4] = [
+    [-0.5, 0.0, -0.375, 0.125],
+    [0.25, -0.25, 0.375, -0.125],
+    [-0.3125, 0.1875, -0.4375, 0.0625],
+    [0.4375, -0.0625, 0.3125, -0.1875],
+];
+
+const BAYER_8X8: [[f32; 8]; 8] = [
+    // Values are (n / 64) - 0.5 where n is from the standard Bayer-8 integer matrix
+    // [ 0, 32,  8, 40,  2, 34, 10, 42],
+    // [48, 16, 56, 24, 50, 18, 58, 26],
+    // [12, 44,  4, 36, 14, 46,  6, 38],
+    // [60, 28, 52, 20, 62, 30, 54, 22],
+    // [ 3, 35, 11, 43,  1, 33,  9, 41],
+    // [51, 19, 59, 27, 49, 17, 57, 25],
+    // [15, 47,  7, 39, 13, 45,  5, 37],
+    // [63, 31, 55, 23, 61, 29, 53, 21],
+    // After (n/64 - 0.5):
+    [
+        -0.5, 0.0, -0.375, 0.125, -0.46875, 0.03125, -0.34375, 0.15625,
+    ],
+    [
+        0.25, -0.25, 0.375, -0.125, 0.28125, -0.21875, 0.40625, -0.09375,
+    ],
+    [
+        -0.3125, 0.1875, -0.4375, 0.0625, -0.28125, 0.21875, -0.40625, 0.09375,
+    ],
+    [
+        0.4375, -0.0625, 0.3125, -0.1875, 0.46875, -0.03125, 0.34375, -0.15625,
+    ],
+    [
+        -0.453125, 0.046875, -0.328125, 0.171875, -0.484375, 0.015625, -0.359375, 0.140625,
+    ],
+    [
+        0.296875, -0.203125, 0.421875, -0.078125, 0.265625, -0.234375, 0.390625, -0.109375,
+    ],
+    [
+        -0.265625, 0.234375, -0.390625, 0.109375, -0.296875, 0.203125, -0.421875, 0.078125,
+    ],
+    [
+        0.484375, -0.015625, 0.359375, -0.140625, 0.453125, -0.046875, 0.328125, -0.171875,
+    ],
+];
+
 pub fn palette_map(
     image: Image,
     colors: &[String],
     dither: Option<DitherConfig>,
 ) -> Result<Image, crate::PixelizerError> {
-    if let Some(dither_config) = dither {
-        return palette_map_dithered(&image, colors, dither_config);
-    };
+    let foo: PaletteData = prepare_palette(colors)?;
+    match dither {
+        None => palette_map_flat(image, foo.rgb, foo.lab),
+        Some(DitherConfig::FloydSteinberg { bleed, clamp }) => palette_map_diffuse(
+            image,
+            FLOYD_STEINBERG,
+            foo.rgb,
+            foo.lab,
+            foo.linear,
+            foo.max_per_channel,
+            bleed,
+            clamp,
+        ),
+        Some(DitherConfig::Atkinson { bleed, clamp }) => palette_map_diffuse(
+            image,
+            ATKINSON,
+            foo.rgb,
+            foo.lab,
+            foo.linear,
+            foo.max_per_channel,
+            bleed,
+            clamp,
+        ),
+        Some(DitherConfig::Jjn { bleed, clamp }) => palette_map_diffuse(
+            image,
+            JJN,
+            foo.rgb,
+            foo.lab,
+            foo.linear,
+            foo.max_per_channel,
+            bleed,
+            clamp,
+        ),
+        Some(DitherConfig::Bayer4 { strength }) => {
+            palette_map_ordered(image, foo.rgb, foo.lab, strength, 4)
+        }
+        Some(DitherConfig::Bayer8 { strength }) => {
+            palette_map_ordered(image, foo.rgb, foo.lab, strength, 8)
+        }
+    }
+}
 
-    let PaletteData {
-        rgb,
-        lab,
-        linear: _,
-        max_per_channel: _,
-    } = prepare_palette(colors)?;
-
+pub fn palette_map_flat(
+    image: Image,
+    rgb: Vec<[u8; 3]>,
+    lab: Vec<Oklab>,
+) -> Result<Image, crate::PixelizerError> {
     let (w, h) = image.dimensions();
     let mut out = Image::new(w, h);
 
@@ -73,18 +155,16 @@ pub fn palette_map(
     Ok(out)
 }
 
-pub fn palette_map_dithered(
-    img: &Image,
-    colors: &[String],
-    dither_config: DitherConfig,
+pub fn palette_map_diffuse(
+    img: Image,
+    alg: &[(i32, i32, f32)],
+    rgb: Vec<[u8; 3]>,
+    lab: Vec<Oklab>,
+    linear: Vec<[f32; 3]>,
+    max_per_channel: [f32; 3],
+    bleed: f32,
+    clamp: bool,
 ) -> Result<Image, crate::PixelizerError> {
-    let PaletteData {
-        rgb,
-        lab,
-        linear,
-        max_per_channel,
-    } = prepare_palette(colors)?;
-
     let (w, h) = img.dimensions();
 
     // Working buffer in LINEAR light, not sRGB.
@@ -103,15 +183,6 @@ pub fn palette_map_dithered(
     let mut out = Image::new(w, h);
 
     let idx = |x: u32, y: u32| (y * w + x) as usize;
-
-    let alg = match dither_config.kind {
-        DitherKind::Atkinson => ATKINSON,
-        DitherKind::FloydSteinberg => FLOYD_STEINBERG,
-        DitherKind::JJN => JJN,
-    };
-
-    let clamp = dither_config.clamp;
-    let error_damping = dither_config.bleed;
 
     for y in 0..h {
         let ltr = y % 2 == 0;
@@ -133,7 +204,7 @@ pub fn palette_map_dithered(
             } else {
                 buf[idx(x, y)]
             };
-            let (pal_idx, error) = quantize(&lab, &linear, pixel, error_damping);
+            let (pal_idx, error) = quantize(&lab, &linear, pixel, bleed);
             let [pr, pg, pb] = rgb[pal_idx];
             out.put_pixel(x, y, image::Rgba([pr, pg, pb, alpha[idx(x, y)]]));
 
@@ -149,6 +220,41 @@ pub fn palette_map_dithered(
                 }
             }
         }
+    }
+    Ok(out)
+}
+
+pub fn palette_map_ordered(
+    image: Image,
+    rgb: Vec<[u8; 3]>,
+    lab: Vec<Oklab>,
+    strength: f32,
+    size: usize,
+) -> Result<Image, crate::PixelizerError> {
+    let (w, h) = image.dimensions();
+    let mut out = Image::new(w, h);
+
+    let matrix = if size == 4 {
+        BayerMatrix::Four(&BAYER_4X4)
+    } else {
+        BayerMatrix::Eight(&BAYER_8X8)
+    };
+
+    for (x, y, pixel) in image.enumerate_pixels() {
+        let [r, g, b, a] = pixel.0;
+        let bias = match matrix {
+            BayerMatrix::Four(m) => m[(y as usize) % size][(x as usize) % size] * strength,
+            BayerMatrix::Eight(m) => m[(y as usize) % size][(x as usize) % size] * strength,
+        };
+        // let bias = matrix[(y as usize) % size][(x as usize) % size] * strength;
+
+        let biased_r = (r as f32 + bias).clamp(0.0, 255.0) as u8;
+        let biased_g = (g as f32 + bias).clamp(0.0, 255.0) as u8;
+        let biased_b = (b as f32 + bias).clamp(0.0, 255.0) as u8;
+
+        let idx = nearest_oklab(&lab, rgb_to_oklab(biased_r, biased_g, biased_b));
+        let [pr, pg, pb] = rgb[idx];
+        out.put_pixel(x, y, image::Rgba([pr, pg, pb, a]));
     }
     Ok(out)
 }
