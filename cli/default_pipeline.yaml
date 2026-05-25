@@ -10,6 +10,7 @@ operations:
   - type: blur
     sigma: 4.0
   - type: downsample
+  - type: normalize
   - type: palette_map
     colors:
       - "#2c2416"

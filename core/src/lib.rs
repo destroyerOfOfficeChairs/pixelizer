@@ -2,6 +2,7 @@ pub use image;
 mod blur;
 mod color_utils;
 mod downsample;
+mod normalize;
 mod palette_map;
 mod posterize;
 mod trim_height;
@@ -9,6 +10,7 @@ mod trim_width;
 mod upscale;
 use blur::blur;
 use downsample::downsample;
+use normalize::normalize;
 use palette_map::palette_map;
 use posterize::posterize;
 use trim_height::trim_height;
@@ -97,7 +99,20 @@ pub enum Operation {
     Blur {
         sigma: f32,
     },
+    Normalize {
+        #[serde(default = "default_low_percentile")]
+        low: f32,
+        #[serde(default = "default_high_percentile")]
+        high: f32,
+    },
 }
+
+fn default_low_percentile() -> f32 {
+    0.01
+}
+fn default_high_percentile() -> f32 {
+    0.99
+} // clip brightest 1%
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
@@ -135,6 +150,7 @@ pub fn apply(pipeline: &Pipeline, mut image: Image) -> Result<Image, PixelizerEr
             Operation::Upscale { factor } => image = upscale(image, *factor),
             Operation::Posterize { levels } => image = posterize(image, *levels)?,
             Operation::Blur { sigma } => image = blur(image, *sigma),
+            Operation::Normalize { low, high } => image = normalize(image, *low, *high),
         }
     }
     Ok(image)
