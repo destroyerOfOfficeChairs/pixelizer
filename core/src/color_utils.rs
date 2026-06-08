@@ -149,3 +149,107 @@ pub fn quantize(
         ],
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn srgb_to_linear_endpoints() {
+        // Black and white should round-trip exactly.
+        assert_eq!(srgb_to_linear(0), 0.0);
+        assert!((srgb_to_linear(255) - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn srgb_to_linear_midpoint() {
+        // 50% gray in sRGB is about 21.8% in linear light — this is the
+        // whole point of gamma encoding.
+        let mid = srgb_to_linear(128);
+        assert!(mid > 0.20 && mid < 0.23, "got {}", mid);
+    }
+
+    #[test]
+    fn linear_to_srgb_roundtrip() {
+        // Round-tripping through linear should preserve sRGB byte values.
+        for v in [0u8, 1, 50, 128, 200, 254, 255] {
+            let linear = srgb_to_linear(v);
+            let back = linear_to_srgb(linear);
+            assert!(
+                (back as i32 - v as i32).abs() <= 1,
+                "round-trip failed for {}: got {}",
+                v,
+                back
+            );
+        }
+    }
+
+    #[test]
+    fn parse_hex_basic() {
+        assert_eq!(parse_hex("#ff0000").unwrap(), [255, 0, 0]);
+        assert_eq!(parse_hex("00ff00").unwrap(), [0, 255, 0]);
+        assert_eq!(parse_hex("#0000FF").unwrap(), [0, 0, 255]);
+    }
+
+    #[test]
+    fn parse_hex_rejects_bad_input() {
+        assert!(parse_hex("").is_err());
+        assert!(parse_hex("#fff").is_err()); // too short
+        assert!(parse_hex("#ff00000").is_err()); // too long
+        assert!(parse_hex("#gggggg").is_err()); // not hex
+        assert!(parse_hex("not a color").is_err());
+    }
+
+    #[test]
+    fn nearest_oklab_picks_exact_match() {
+        // A palette containing the target color should always pick that color.
+        let red = rgb_to_oklab(255, 0, 0);
+        let green = rgb_to_oklab(0, 255, 0);
+        let blue = rgb_to_oklab(0, 0, 255);
+        let palette = vec![red, green, blue];
+
+        assert_eq!(nearest_oklab(&palette, rgb_to_oklab(255, 0, 0)), 0);
+        assert_eq!(nearest_oklab(&palette, rgb_to_oklab(0, 255, 0)), 1);
+        assert_eq!(nearest_oklab(&palette, rgb_to_oklab(0, 0, 255)), 2);
+    }
+
+    #[test]
+    fn nearest_oklab_picks_perceptually_closer() {
+        // A slightly-off red should map to pure red, not to green or blue.
+        let palette = vec![
+            rgb_to_oklab(255, 0, 0),
+            rgb_to_oklab(0, 255, 0),
+            rgb_to_oklab(0, 0, 255),
+        ];
+        let off_red = rgb_to_oklab(240, 10, 10);
+        assert_eq!(nearest_oklab(&palette, off_red), 0);
+    }
+
+    #[test]
+    fn prepare_palette_rejects_empty() {
+        let result = prepare_palette(&[]);
+        assert!(matches!(
+            result,
+            Err(crate::PixelizerError::NoColorsError(_))
+        ));
+    }
+
+    #[test]
+    fn prepare_palette_rejects_bad_hex() {
+        let result = prepare_palette(&["#ff0000".into(), "garbage".into()]);
+        assert!(matches!(
+            result,
+            Err(crate::PixelizerError::HexParseError(_))
+        ));
+    }
+
+    #[test]
+    fn prepare_palette_computes_max_correctly() {
+        let palette =
+            prepare_palette(&["#000000".into(), "#808080".into(), "#ffffff".into()]).unwrap();
+        // White should be the max in every channel.
+        assert!((palette.max_per_channel[0] - 1.0).abs() < 0.001);
+        assert!((palette.max_per_channel[1] - 1.0).abs() < 0.001);
+        assert!((palette.max_per_channel[2] - 1.0).abs() < 0.001);
+    }
+}

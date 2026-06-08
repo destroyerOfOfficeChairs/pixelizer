@@ -1,16 +1,18 @@
 operations:
   - type: pixel_size
-    size: 16
+    size: 8
   - type: trim_height
     mode: both
   - type: trim_width
     mode: both
-  - type: posterize
-    levels: 5
-  - type: blur
-    sigma: 4.0
+  # - type: posterize
+  #   levels: 5
+  # - type: blur
+  #   sigma: 4.0
   - type: downsample
   - type: normalize
+    low: .05
+    high: .95
   - type: palette_map
     colors:
       - "#2c2416"
@@ -19,6 +21,15 @@ operations:
       - "#c4a875"
       - "#d4b896"
       - "#e8d5a8"
+    # colors:
+    #   - "#111111"
+    #   - "#333333"
+    #   - "#555555"
+    #   - "#777777"
+    #   - "#999999"
+    #   - "#bbbbbb"
+    #   - "#dddddd"
+    #   - "#ffffff"
     # dither:
     #   algorithm: atkinson
     #   bleed: 0.2
@@ -27,4 +38,4 @@ operations:
       algorithm: bayer8
       strength: 32.0
   - type: upscale
-    factor: 16
+    factor: 8

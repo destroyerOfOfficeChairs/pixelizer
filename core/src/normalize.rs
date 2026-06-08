@@ -50,3 +50,49 @@ pub fn normalize(image: Image, low_percentile: f32, high_percentile: f32) -> Ima
     }
     out
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_stretches_dim_image_to_full_range() {
+        // An image where all pixels are in [100, 150] should stretch to [0, 255].
+        let mut img = Image::new(3, 1);
+        img.put_pixel(0, 0, image::Rgba([100, 100, 100, 255]));
+        img.put_pixel(1, 0, image::Rgba([125, 125, 125, 255]));
+        img.put_pixel(2, 0, image::Rgba([150, 150, 150, 255]));
+
+        let out = normalize(img, 0.0, 1.0);
+
+        // With 0/1.0 percentiles, exact min/max should stretch perfectly.
+        assert_eq!(out.get_pixel(0, 0).0[0], 0);
+        assert_eq!(out.get_pixel(2, 0).0[0], 255);
+        // Middle should be roughly halfway.
+        let mid = out.get_pixel(1, 0).0[0];
+        assert!(mid > 120 && mid < 135, "got {}", mid);
+    }
+
+    #[test]
+    fn normalize_preserves_alpha() {
+        let mut img = Image::new(2, 1);
+        img.put_pixel(0, 0, image::Rgba([100, 100, 100, 50]));
+        img.put_pixel(1, 0, image::Rgba([200, 200, 200, 200]));
+        let out = normalize(img, 0.0, 1.0);
+        assert_eq!(out.get_pixel(0, 0).0[3], 50);
+        assert_eq!(out.get_pixel(1, 0).0[3], 200);
+    }
+
+    #[test]
+    fn normalize_handles_uniform_image() {
+        // All pixels identical → should not divide by zero, just pass through.
+        let mut img = Image::new(3, 1);
+        for x in 0..3 {
+            img.put_pixel(x, 0, image::Rgba([128, 128, 128, 255]));
+        }
+        let out = normalize(img, 0.0, 1.0);
+        for x in 0..3 {
+            assert_eq!(out.get_pixel(x, 0).0[0], 128);
+        }
+    }
+}
