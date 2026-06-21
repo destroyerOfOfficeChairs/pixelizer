@@ -72,7 +72,7 @@ pub struct Pipeline {
     pub operations: Vec<Operation>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Operation {
     PixelSize {
