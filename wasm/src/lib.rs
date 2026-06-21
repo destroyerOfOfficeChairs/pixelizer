@@ -26,7 +26,7 @@ impl PixelizeResult {
         self.height
     }
     // Returns the RGBA bytes. `getter_with_clone` because Vec<u8> isn't Copy.
-    #[wasm_bindgen(getter, getter_with_clone)]
+    #[wasm_bindgen(getter)]
     pub fn data(&self) -> Vec<u8> {
         self.data.clone()
     }

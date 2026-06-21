@@ -5,16 +5,12 @@ mod downsample;
 mod normalize;
 mod palette_map;
 mod posterize;
-mod trim_height;
-mod trim_width;
 mod upscale;
 use blur::blur;
 use downsample::downsample;
 use normalize::normalize;
 use palette_map::palette_map;
 use posterize::posterize;
-use trim_height::trim_height;
-use trim_width::trim_width;
 use upscale::upscale;
 
 pub type Image = image::RgbaImage;
@@ -60,8 +56,6 @@ fn default_strength() -> f32 {
 
 #[derive(Debug)]
 pub enum PixelizerError {
-    TrimError(String),
-    OrderError(String),
     HexParseError(String),
     NoColorsError(String),
     PosterizeError(String),
@@ -75,16 +69,10 @@ pub struct Pipeline {
 #[derive(serde::Deserialize, serde::Serialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Operation {
-    PixelSize {
-        size: u32,
+    Downsample {
+        pixel_size: u32,
+        trim: TrimMode,
     },
-    TrimHeight {
-        mode: TrimMode,
-    },
-    TrimWidth {
-        mode: TrimMode,
-    },
-    Downsample,
     PaletteMap {
         colors: Vec<String>,
         #[serde(default)]
@@ -114,36 +102,29 @@ fn default_high_percentile() -> f32 {
     0.99
 } // clip brightest 1%
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Copy)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum TrimMode {
-    Top,
-    Bottom,
-    Left,
-    Right,
-    Both,
+    TrimTop,
+    TrimBottom,
+    TrimLeft,
+    TrimRight,
+    TrimVertical,
+    TrimHorizontal,
+    TrimTopAndLeft,
+    TrimTopAndRight,
+    TrimBottomAndLeft,
+    TrimBottomAndRight,
+    TrimAll,
+    TrimNone,
 }
 
 pub fn apply(pipeline: &Pipeline, mut image: Image) -> Result<Image, PixelizerError> {
-    let mut pixel_size: u32 = 1;
-
-    for (i, op) in pipeline.operations.iter().enumerate() {
+    for op in &pipeline.operations {
         match op {
-            Operation::PixelSize { size } => {
-                if i != 0 {
-                    return Err(PixelizerError::OrderError(
-                        "Setting pixel size must be the first operation.".to_owned(),
-                    ));
-                }
-                pixel_size = *size;
+            Operation::Downsample { pixel_size, trim } => {
+                image = downsample(*pixel_size, *trim, image)
             }
-            Operation::TrimHeight { mode } => {
-                image = trim_height(*mode, image, pixel_size)?;
-            }
-            Operation::TrimWidth { mode } => {
-                image = trim_width(*mode, image, pixel_size)?;
-            }
-            Operation::Downsample => image = downsample(image, pixel_size),
             Operation::PaletteMap { colors, dither } => {
                 image = palette_map(image, colors, *dither)?
             }

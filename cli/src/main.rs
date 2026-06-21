@@ -15,8 +15,6 @@ fn main() {
         Ok(output) => output.save(output_path).expect("save output"),
         // Apparently, using thiserror could clean this up.
         Err(error) => match error {
-            PixelizerError::TrimError(e) => eprintln!("{}", e),
-            PixelizerError::OrderError(e) => eprintln!("{}", e),
             PixelizerError::HexParseError(e) => eprintln!("{}", e),
             PixelizerError::NoColorsError(e) => eprintln!("{}", e),
             PixelizerError::PosterizeError(e) => eprintln!("{}", e),

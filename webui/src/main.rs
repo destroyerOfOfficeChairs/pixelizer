@@ -9,10 +9,7 @@ struct OpRow {
 
 fn op_label(op: &Operation) -> &'static str {
     match op {
-        Operation::PixelSize { .. } => "Pixel Size",
-        Operation::TrimHeight { .. } => "Trim Height",
-        Operation::TrimWidth { .. } => "Trim Width",
-        Operation::Downsample => "Downsample",
+        Operation::Downsample { .. } => "Downsample",
         Operation::PaletteMap { .. } => "Palette Map",
         Operation::Upscale { .. } => "Upscale",
         Operation::Posterize { .. } => "Posterize",
@@ -23,30 +20,49 @@ fn op_label(op: &Operation) -> &'static str {
 
 fn default_op(label: &str) -> Operation {
     match label {
-        "Pixel Size" => Operation::PixelSize { size: 8 },
-        "Trim Height" => Operation::TrimHeight { mode: TrimMode::Both },
-        "Trim Width" => Operation::TrimWidth { mode: TrimMode::Both },
-        "Downsample" => Operation::Downsample,
-        "Palette Map" => Operation::PaletteMap { colors: vec![], dither: None },
+        "Downsample" => Operation::Downsample {
+            pixel_size: 8,
+            trim: TrimMode::TrimAll,
+        },
+        "Palette Map" => Operation::PaletteMap {
+            colors: vec![],
+            dither: None,
+        },
         "Upscale" => Operation::Upscale { factor: 4 },
         "Posterize" => Operation::Posterize { levels: 4 },
         "Blur" => Operation::Blur { sigma: 1.0 },
-        "Normalize" => Operation::Normalize { low: 0.01, high: 0.99 },
-        _ => Operation::Downsample,
+        "Normalize" => Operation::Normalize {
+            low: 0.01,
+            high: 0.99,
+        },
+        _ => Operation::Downsample {
+            pixel_size: 8,
+            trim: TrimMode::TrimAll,
+        },
     }
 }
 
 const ALL_LABELS: &[&str] = &[
-    "Pixel Size", "Trim Height", "Trim Width", "Downsample",
-    "Palette Map", "Upscale", "Posterize", "Blur", "Normalize",
+    "Downsample",
+    "Palette Map",
+    "Upscale",
+    "Posterize",
+    "Blur",
+    "Normalize",
 ];
 
 #[component]
 fn PipelineList() -> impl IntoView {
     let next_id = StoredValue::new(2);
     let (rows, set_rows) = signal(vec![
-        OpRow { id: 0, op: Operation::Blur { sigma: 4.0 } },
-        OpRow { id: 1, op: Operation::Posterize { levels: 5 } },
+        OpRow {
+            id: 0,
+            op: Operation::Blur { sigma: 4.0 },
+        },
+        OpRow {
+            id: 1,
+            op: Operation::Posterize { levels: 5 },
+        },
     ]);
 
     let move_op = move |id: usize, dir: i32| {
@@ -65,7 +81,12 @@ fn PipelineList() -> impl IntoView {
     let add_op = move |label: String| {
         let id = next_id.get_value();
         next_id.set_value(id + 1);
-        set_rows.update(|rows| rows.push(OpRow { id, op: default_op(&label) }));
+        set_rows.update(|rows| {
+            rows.push(OpRow {
+                id,
+                op: default_op(&label),
+            })
+        });
     };
 
     // Update one row's op in place by id, via a closure that mutates the Operation.
@@ -162,7 +183,8 @@ fn op_config_view(
                         }
                     />
                 </label>
-            }.into_any()
+            }
+            .into_any()
         }
         Operation::Posterize { levels } => {
             let current = *levels;
@@ -181,11 +203,13 @@ fn op_config_view(
                         }
                     />
                 </label>
-            }.into_any()
+            }
+            .into_any()
         }
         _ => view! {
             <p class="text-xs text-slate-600 italic">"No editable parameters yet."</p>
-        }.into_any(),
+        }
+        .into_any(),
     }
 }
 
