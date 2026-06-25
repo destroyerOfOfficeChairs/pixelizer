@@ -58,6 +58,7 @@ fn default_op(label: &str) -> Operation {
 fn OpCard(
     id: usize,
     op: Operation,
+    rows: ReadSignal<Vec<OpRow>>,
     // Callbacks back to the parent — this is the chapter 3.9 part.
     on_move: Callback<i32>,
     on_remove: Callback<()>,
@@ -123,7 +124,7 @@ fn OpCard(
             >
                 // Inner content is what we measure. Its natural height is the target.
                 <div node_ref=content_ref class="p-3">
-                    {op_config_view(id, &op, on_edit)}
+                    {op_config_view(id, &op, rows, on_edit)}
                 </div>
             </div>
         </div>
@@ -196,6 +197,7 @@ fn PipelineList() -> impl IntoView {
                         <OpCard
                             id=id
                             op=r.op.clone()
+                            rows=rows
                             on_move=Callback::new(move |dir: i32| move_op(id, dir))
                             on_remove=Callback::new(move |_| remove_op(id))
                             on_edit=edit_op
@@ -222,25 +224,65 @@ fn PipelineList() -> impl IntoView {
     }
 }
 
+fn round1(v: f32) -> f32 {
+    (v * 10.0).round() / 10.0
+}
+
 // Returns the per-variant config inputs. Only Blur and Posterize are
 // editable for now; the rest show a placeholder. This is the pattern
 // you'll replicate for every variant.
-fn op_config_view(id: usize, op: &Operation, on_edit: Callback<EditPayload>) -> AnyView {
+fn op_config_view(
+    id: usize,
+    op: &Operation,
+    rows: ReadSignal<Vec<OpRow>>,
+    on_edit: Callback<EditPayload>,
+) -> AnyView {
     match op {
-        Operation::Blur { sigma } => {
-            let current = *sigma;
+        Operation::Blur { .. } => {
+            // Live read of THIS op's sigma from the single source of truth.
+            let sigma = move || {
+                rows.get()
+                    .iter()
+                    .find(|r| r.id == id)
+                    .and_then(|r| match r.op {
+                        Operation::Blur { sigma } => Some(sigma),
+                        _ => None,
+                    })
+                    .unwrap_or(0.0)
+            };
+            let display = move || format!("{:.1}", sigma());
+
+            // One place that commits a new value: quantize, then push to rows.
+            let commit = move |raw: f32| {
+                let v = round1(raw); // quantize on store → JSON shows 5.7, not 5.73
+                on_edit.run((
+                    id,
+                    Box::new(move |op| {
+                        if let Operation::Blur { sigma } = op {
+                            *sigma = v;
+                        }
+                    }),
+                ));
+            };
+
             view! {
                 <label class="text-xs text-slate-400 block">
-                    "sigma: " {move || format!("{current:.1}")}
+                    "sigma: "
+                    <input
+                        type="number" min="0" max="10" step="0.1"
+                        prop:value=display
+                        on:change=move |ev| {
+                            let raw: f32 = event_target_value(&ev).parse().unwrap_or(0.0);
+                            commit(raw);
+                        }
+                    />
                     <input
                         type="range" min="0" max="10" step="0.1"
-                        prop:value=current
+                        prop:value=display
                         class="w-full accent-teal-500"
                         on:input=move |ev| {
-                            let v: f32 = event_target_value(&ev).parse().unwrap_or(0.0);
-                            on_edit.run((id, Box::new(move |op| {
-                                if let Operation::Blur { sigma } = op { *sigma = v; }
-                            })));
+                            let raw: f32 = event_target_value(&ev).parse().unwrap_or(0.0);
+                            commit(raw);
                         }
                     />
                 </label>
@@ -248,16 +290,29 @@ fn op_config_view(id: usize, op: &Operation, on_edit: Callback<EditPayload>) -> 
             .into_any()
         }
         Operation::Posterize { levels } => {
-            let current = *levels;
+            let (current, set_current) = signal(*levels);
             view! {
                 <label class="text-xs text-slate-400 block">
-                    "levels: " {move || current.to_string()}
+                    "levels: "
+                    <input
+                        type="number" min="2" max="16" step="1"
+                        prop:value=current
+                        // TODO class=???
+                        on:change=move |ev| {
+                            let v: u32 = event_target_value(&ev).parse().unwrap_or(2);
+                            set_current.set(v);
+                            on_edit.run((id, Box::new(move |op| {
+                                if let Operation::Posterize { levels } = op { *levels = v; }
+                            })));
+                        }
+                    />
                     <input
                         type="range" min="2" max="16" step="1"
                         prop:value=current
                         class="w-full accent-teal-500"
                         on:input=move |ev| {
                             let v: u32 = event_target_value(&ev).parse().unwrap_or(2);
+                            set_current.set(v);
                             on_edit.run((id, Box::new(move |op| {
                                 if let Operation::Posterize { levels } = op { *levels = v; }
                             })));
