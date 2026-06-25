@@ -2,3 +2,4 @@
 *.png
 /cli/output.png
 /cli/sticky_note_raw.png
+/webui/dist
