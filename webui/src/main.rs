@@ -39,17 +39,11 @@ fn default_op(label: &str) -> Operation {
 
 #[component]
 fn PipelineList() -> impl IntoView {
-    let next_id = StoredValue::new(2);
-    let (rows, set_rows) = signal(vec![
-        OpRow {
-            id: 0,
-            op: Operation::Blur { sigma: 4.0 },
-        },
-        OpRow {
-            id: 1,
-            op: Operation::Posterize { levels: 5 },
-        },
-    ]);
+    let next_id = StoredValue::new(1);
+    let (rows, set_rows) = signal(vec![OpRow {
+        id: 0,
+        op: Operation::Downsample { pixel_size: 8 },
+    }]);
 
     let move_op = move |id: usize, dir: i32| {
         set_rows.update(|rows| {

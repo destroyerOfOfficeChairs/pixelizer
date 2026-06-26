@@ -1,14 +1,17 @@
 mod blur;
+mod downsample;
 mod normalize;
 mod number_slider;
 mod posterize;
 
-use crate::{EditPayload, OpRow};
 use blur::blur_config;
-use leptos::prelude::*;
+use downsample::downsample_config;
 use normalize::normalize_config;
-use pixelizer_core::Operation;
 use posterize::posterize_config;
+
+use crate::{EditPayload, OpRow};
+use leptos::prelude::*;
+use pixelizer_core::Operation;
 
 pub fn op_config_view(
     id: usize,
@@ -20,6 +23,7 @@ pub fn op_config_view(
         Operation::Blur { .. } => blur_config(id, rows, on_edit),
         Operation::Posterize { .. } => posterize_config(id, rows, on_edit),
         Operation::Normalize { .. } => normalize_config(id, rows, on_edit),
+        Operation::Downsample { .. } => downsample_config(id, rows, on_edit),
         _ => view! {
             <p class="text-xs text-slate-600 italic">"No editable parameters yet."</p>
         }
