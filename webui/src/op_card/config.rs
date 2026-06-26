@@ -1,4 +1,5 @@
 mod blur;
+mod number_slider;
 mod posterize;
 
 use crate::{EditPayload, OpRow};
