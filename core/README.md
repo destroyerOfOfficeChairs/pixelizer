@@ -19,6 +19,8 @@ output.save("output.png")?;
 
 A pipeline is a list of operations. Each operation has a `type` field identifying it and optional parameters. Operations are applied top-to-bottom.
 
+### Example yaml:
+
 ```yaml
 operations:
   - type: downsample
@@ -72,7 +74,7 @@ operations:
   - `algorithm: bayer4 | bayer8` plus:
     - `strength: f32` — Magnitude of the per-pixel dither bias (default 32.0).
 
-## Design notes
+## Design and Implementation Notes
 
 ### Why perceptual color matching?
 
@@ -96,9 +98,9 @@ Each representation serves a different purpose. We compute them once during pale
 ### Operation order matters
 
 The pipeline is just an ordered list, but the order has real consequences:
-- `trim_*` should come before `downsample` (it prepares the image dimensions).
-- `downsample` should generally come before `palette_map` if you want pixel-art-resolution dithering; after if you want full-resolution dithering with nearest-neighbor downscaling.
+- `downsample` should generally come before `palette_map`, though you can reverse this order if you like - but it will be slower.
 - `normalize` should come before any quantization step (`posterize`, `palette_map`) whose output depends on the input's brightness distribution.
+- `upscale` should be the last step.
 
 ## Module layout
 
