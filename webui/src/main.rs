@@ -1,7 +1,7 @@
 mod op_card;
 use leptos::prelude::*;
 use op_card::OpCard;
-use pixelizer_core::{Operation, Pipeline, TrimMode};
+use pixelizer_core::{Operation, Pipeline};
 pub type EditPayload = (usize, Box<dyn Fn(&mut Operation)>);
 
 #[derive(Clone)]
@@ -21,10 +21,7 @@ const ALL_LABELS: &[&str] = &[
 
 fn default_op(label: &str) -> Operation {
     match label {
-        "Downsample" => Operation::Downsample {
-            pixel_size: 8,
-            trim: TrimMode::TrimAll,
-        },
+        "Downsample" => Operation::Downsample { pixel_size: 8 },
         "Palette Map" => Operation::PaletteMap {
             colors: vec![],
             dither: None,
@@ -36,10 +33,7 @@ fn default_op(label: &str) -> Operation {
             low: 0.01,
             high: 0.99,
         },
-        _ => Operation::Downsample {
-            pixel_size: 8,
-            trim: TrimMode::TrimAll,
-        },
+        _ => Operation::Downsample { pixel_size: 8 },
     }
 }
 

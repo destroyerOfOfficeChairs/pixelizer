@@ -23,7 +23,6 @@ A pipeline is a list of operations. Each operation has a `type` field identifyin
 operations:
   - type: downsample
     pixel_size: 16
-    trim: trim_all
   - type: posterize
     levels: 5
   - type: blur
@@ -48,10 +47,8 @@ operations:
 ### Operations
 
 **`downsample`** — Nearest-neighbor downscale by `pixel_size`. After trimming, the output dimensions are evenly divisible.
-- `pixel_size: u32`
-  - Sets the "pixel size".
-- `trim: trim_top | trim_bottom | trim_left | trim_right | trim_vertical | trim_horizontal | trim_top_and_left | trim_top_and_right | trim_bottom_and_left | trim_bottom_and_right | trim_all | trim_none`
-  - Crops the image so dimensions are evenly divisible by `pixel_size`. This avoids fractional pixels when downsampling.
+- `pixel_size: u32`: Sets the pixel size.
+- Crops the image so dimensions are evenly divisible by `pixel_size`. This avoids fractional pixels when downsampling.
 
 **`upscale`** — Nearest-neighbor upscale by an integer factor. Used at the end of a pipeline to make output pixel art viewable at sensible sizes.
 - `factor: u32`

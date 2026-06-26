@@ -71,7 +71,6 @@ pub struct Pipeline {
 pub enum Operation {
     Downsample {
         pixel_size: u32,
-        trim: TrimMode,
     },
     PaletteMap {
         colors: Vec<String>,
@@ -102,29 +101,10 @@ fn default_high_percentile() -> f32 {
     0.99
 } // clip brightest 1%
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum TrimMode {
-    TrimTop,
-    TrimBottom,
-    TrimLeft,
-    TrimRight,
-    TrimVertical,
-    TrimHorizontal,
-    TrimTopAndLeft,
-    TrimTopAndRight,
-    TrimBottomAndLeft,
-    TrimBottomAndRight,
-    TrimAll,
-    TrimNone,
-}
-
 pub fn apply(pipeline: &Pipeline, mut image: Image) -> Result<Image, PixelizerError> {
     for op in &pipeline.operations {
         match op {
-            Operation::Downsample { pixel_size, trim } => {
-                image = downsample(*pixel_size, *trim, image)
-            }
+            Operation::Downsample { pixel_size } => image = downsample(*pixel_size, image),
             Operation::PaletteMap { colors, dither } => {
                 image = palette_map(image, colors, *dither)?
             }

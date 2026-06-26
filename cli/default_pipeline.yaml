@@ -1,20 +1,31 @@
 operations:
   - type: downsample
-    pixel_size: 16
-    trim: trim_all
+    pixel_size: 8
   - type: normalize
     low: .05
-    high: .95
+    high: .99
   - type: palette_map
+    # colors:
+    #   - "#2c2416"
+    #   - "#6e5a3d"
+    #   - "#a08658"
+    #   - "#c4a875"
+    #   - "#d4b896"
+    #   - "#e8d5a8"
+    # colors:
+    #   - "#000000"
+    #   - "#ffffff"
     colors:
-      - "#2c2416"
-      - "#6e5a3d"
-      - "#a08658"
-      - "#c4a875"
-      - "#d4b896"
-      - "#e8d5a8"
+      - "#9bbc0f"
+      - "#8bac0f"
+      - "#306230"
+      - "#0f380f"
+    # dither:
+    #   algorithm: bayer8
+    #   strength: 128.0
     dither:
-      algorithm: bayer8
-      strength: 32.0
+      algorithm: atkinson
+      bleed: .9
+      clamp: true
   - type: upscale
-    factor: 16
+    factor: 8
