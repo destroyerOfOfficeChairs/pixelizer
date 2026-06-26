@@ -26,7 +26,7 @@ fn default_op(label: &str) -> Operation {
             colors: vec![],
             dither: None,
         },
-        "Upscale" => Operation::Upscale { factor: 4 },
+        "Upscale" => Operation::Upscale { factor: 8 },
         "Posterize" => Operation::Posterize { levels: 4 },
         "Blur" => Operation::Blur { sigma: 1.0 },
         "Normalize" => Operation::Normalize {
