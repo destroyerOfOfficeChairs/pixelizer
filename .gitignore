@@ -1,5 +1,22 @@
-/target
+# Rust / Cargo
+/target/
+**/*.rs.bk
+*.pdb
+
+# Trunk / wasm-bindgen build output (webui)
+/webui/dist/
+/webui/pkg/
+
+# Generated images — ignore everything, then un-ignore tracked sample inputs
 *.png
+*.jpg
+*.jpeg
+!cli/girl_with_a_pearl_earring.jpg
+
+# CLI scratch outputs
 /cli/output.png
 /cli/sticky_note_raw.png
-/webui/dist
+
+# Editor / OS cruft
+*.swp
+.DS_Store
