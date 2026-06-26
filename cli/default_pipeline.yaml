@@ -1,6 +1,6 @@
 operations:
   - type: downsample
-    pixel_size: 8
+    pixel_size: 12
   - type: normalize
     low: .05
     high: .99
@@ -20,12 +20,12 @@ operations:
       - "#8bac0f"
       - "#306230"
       - "#0f380f"
-    # dither:
-    #   algorithm: bayer8
-    #   strength: 128.0
     dither:
-      algorithm: atkinson
-      bleed: .9
-      clamp: true
+      algorithm: bayer8
+      strength: 48.0
+    # dither:
+    #   algorithm: atkinson
+    #   bleed: .5
+    #   clamp: true
   - type: upscale
-    factor: 8
+    factor: 12
