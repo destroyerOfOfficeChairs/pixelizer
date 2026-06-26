@@ -1,10 +1,9 @@
-mod op_config_view;
-use crate::OpRow;
+mod config;
+use crate::{EditPayload, OpRow};
+use config::op_config_view;
 use leptos::html;
 use leptos::prelude::*;
-use op_config_view::op_config_view;
 use pixelizer_core::Operation;
-type EditPayload = (usize, Box<dyn Fn(&mut Operation)>);
 
 fn op_label(op: &Operation) -> &'static str {
     match op {

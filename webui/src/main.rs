@@ -2,10 +2,10 @@ mod op_card;
 use leptos::prelude::*;
 use op_card::OpCard;
 use pixelizer_core::{Operation, Pipeline, TrimMode};
-type EditPayload = (usize, Box<dyn Fn(&mut Operation)>);
+pub type EditPayload = (usize, Box<dyn Fn(&mut Operation)>);
 
 #[derive(Clone)]
-struct OpRow {
+pub struct OpRow {
     id: usize,
     op: Operation,
 }
