@@ -1,6 +1,8 @@
-use crate::{OpRow, op_config_view, op_label};
+mod op_config_view;
+use crate::{OpRow, op_label};
 use leptos::html;
 use leptos::prelude::*;
+use op_config_view::op_config_view;
 use pixelizer_core::Operation;
 type EditPayload = (usize, Box<dyn Fn(&mut Operation)>);
 // ---- OpCard: one card. Top bar + collapsible animated settings area. ----
