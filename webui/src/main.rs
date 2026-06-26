@@ -10,17 +10,6 @@ struct OpRow {
     op: Operation,
 }
 
-fn op_label(op: &Operation) -> &'static str {
-    match op {
-        Operation::Downsample { .. } => "Downsample",
-        Operation::PaletteMap { .. } => "Palette Map",
-        Operation::Upscale { .. } => "Upscale",
-        Operation::Posterize { .. } => "Posterize",
-        Operation::Blur { .. } => "Blur",
-        Operation::Normalize { .. } => "Normalize",
-    }
-}
-
 const ALL_LABELS: &[&str] = &[
     "Downsample",
     "Palette Map",

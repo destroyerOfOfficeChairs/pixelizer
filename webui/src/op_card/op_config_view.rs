@@ -18,7 +18,6 @@ pub fn op_config_view(
 ) -> AnyView {
     match op {
         Operation::Blur { .. } => {
-            // Live read of THIS op's sigma from the single source of truth.
             let sigma = move || {
                 rows.get()
                     .iter()
@@ -50,6 +49,7 @@ pub fn op_config_view(
                     <input
                         type="number" min="0" max="10" step="0.1"
                         prop:value=display
+                        // TODO class=???
                         on:change=move |ev| {
                             let raw: f32 = event_target_value(&ev).parse().unwrap_or(0.0);
                             commit(raw);

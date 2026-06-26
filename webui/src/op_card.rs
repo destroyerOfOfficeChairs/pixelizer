@@ -1,26 +1,35 @@
 mod op_config_view;
-use crate::{OpRow, op_label};
+use crate::OpRow;
 use leptos::html;
 use leptos::prelude::*;
 use op_config_view::op_config_view;
 use pixelizer_core::Operation;
 type EditPayload = (usize, Box<dyn Fn(&mut Operation)>);
+
+fn op_label(op: &Operation) -> &'static str {
+    match op {
+        Operation::Downsample { .. } => "Downsample",
+        Operation::PaletteMap { .. } => "Palette Map",
+        Operation::Upscale { .. } => "Upscale",
+        Operation::Posterize { .. } => "Posterize",
+        Operation::Blur { .. } => "Blur",
+        Operation::Normalize { .. } => "Normalize",
+    }
+}
+
 // ---- OpCard: one card. Top bar + collapsible animated settings area. ----
 #[component]
 pub fn OpCard(
     id: usize,
     op: Operation,
     rows: ReadSignal<Vec<OpRow>>,
-    // Callbacks back to the parent — this is the chapter 3.9 part.
     on_move: Callback<i32>,
     on_remove: Callback<()>,
     on_edit: Callback<EditPayload>,
 ) -> impl IntoView {
-    // Local UI state: is the settings area open? Lives in the card, because
-    // it's nobody else's business — the parent doesn't care if a card is expanded.
     let (open, set_open) = signal(true);
 
-    // A handle to the settings-content div, so we can measure its height.
+    // A handle to the settings-content div, to measure its height.
     let content_ref: NodeRef<html::Div> = NodeRef::new();
 
     let label = op_label(&op);
@@ -74,7 +83,7 @@ pub fn OpCard(
                 class="overflow-hidden transition-[max-height] duration-200 ease-in-out"
                 style:max-height=max_height
             >
-                // Inner content is what we measure. Its natural height is the target.
+                // Inner content is what is measured. Its natural height is the target.
                 <div node_ref=content_ref class="p-3">
                     {op_config_view(id, &op, rows, on_edit)}
                 </div>
