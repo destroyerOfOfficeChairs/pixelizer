@@ -1,6 +1,6 @@
 # pixelizer-core
 
-A pipelined image-processing library for transforming photographs into pixel art. 
+A pipelined image-processing library for transforming photographs into pixel art.
 Operations are described as a list of steps in YAML (or any serde format) and applied in sequence to produce a final image.
 
 ## Quickstart
@@ -21,17 +21,13 @@ A pipeline is a list of operations. Each operation has a `type` field identifyin
 
 ```yaml
 operations:
-  - type: pixel_size
-    size: 16
-  - type: trim_height
-    mode: both
-  - type: trim_width
-    mode: both
+  - type: downsample
+    pixel_size: 16
+    trim: trim_all
   - type: posterize
     levels: 5
   - type: blur
     sigma: 4.0
-  - type: downsample
   - type: normalize
     low: 0.01
     high: 0.99
@@ -51,14 +47,11 @@ operations:
 
 ### Operations
 
-**`pixel_size`** — Sets the "pixel size" used by downstream operations. Must be the first operation if present. Default: 1.
-- `size: u32`
-
-**`trim_height` / `trim_width`** — Crops the image so dimensions are evenly divisible by `pixel_size`. This avoids fractional pixels when downsampling.
-- `mode: top | bottom | left | right | both`
-- `trim_height` accepts `top | bottom | both`; `trim_width` accepts `left | right | both`.
-
 **`downsample`** — Nearest-neighbor downscale by `pixel_size`. After trimming, the output dimensions are evenly divisible.
+- `pixel_size: u32`
+  - Sets the "pixel size".
+- `trim: trim_top | trim_bottom | trim_left | trim_right | trim_vertical | trim_horizontal | trim_top_and_left | trim_top_and_right | trim_bottom_and_left | trim_bottom_and_right | trim_all | trim_none`
+  - Crops the image so dimensions are evenly divisible by `pixel_size`. This avoids fractional pixels when downsampling.
 
 **`upscale`** — Nearest-neighbor upscale by an integer factor. Used at the end of a pipeline to make output pixel art viewable at sensible sizes.
 - `factor: u32`
@@ -92,7 +85,7 @@ operations:
 
 sRGB values stored in image files are gamma-encoded — they're nonlinear with respect to actual light intensity. Adding 0.1 to an sRGB value doesn't add a consistent amount of light depending on where you start.
 
-When dithering propagates quantization error to neighboring pixels, that error needs to be arithmetic on light intensities, not on gamma-encoded numbers. Otherwise the algorithm generates the wrong corrections and produces too-dark midtones and color casts. `palette_map_diffuse` converts to linear-light floats, dithers in that space, and converts back to sRGB only when writing each output pixel.
+When dithering propagates quantization error to neighboring pixels, that error needs to be arithmetic on light intensities, not on gamma-encoded numbers. Otherwise, the algorithm generates the wrong corrections and produces too-dark midtones and color casts. `palette_map_diffuse` converts to linear-light floats, dithers in that space, and converts back to sRGB only when writing each output pixel.
 
 ### Why the palette is stored three ways
 
