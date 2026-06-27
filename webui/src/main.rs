@@ -37,7 +37,7 @@ fn default_op(label: &str) -> Operation {
     match label {
         "Downsample" => Operation::Downsample { pixel_size: 8 },
         "Palette Map" => Operation::PaletteMap {
-            colors: vec![],
+            colors: vec!["#000000".to_owned(), "#ffffff".to_owned()],
             dither: None,
         },
         "Upscale" => Operation::Upscale { factor: 8 },
@@ -101,7 +101,6 @@ fn PipelineList() -> impl IntoView {
         <div class="max-w-md mx-auto p-4 flex flex-col gap-3">
             <h3 class="text-lg font-bold text-teal-300">"Pipeline"</h3>
             <div class="flex flex-col gap-3">
-            // Inside PipelineList, the <For/> becomes:
             <For
                 each=move || rows.get()
                 key=|r| r.id

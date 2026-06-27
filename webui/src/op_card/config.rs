@@ -2,12 +2,14 @@ mod blur;
 mod downsample;
 mod normalize;
 mod number_slider;
+mod palette_map;
 mod posterize;
 mod upscale;
 
 use blur::blur_config;
 use downsample::downsample_config;
 use normalize::normalize_config;
+use palette_map::palette_map_config;
 use posterize::posterize_config;
 use upscale::upscale_config;
 
@@ -27,6 +29,7 @@ pub fn op_config_view(
         Operation::Normalize { .. } => normalize_config(id, rows, on_edit),
         Operation::Downsample { .. } => downsample_config(id, rows, on_edit),
         Operation::Upscale { .. } => upscale_config(id, rows, on_edit),
+        Operation::PaletteMap { colors, dither } => palette_map_config(id, rows, on_edit),
         _ => view! {
             <p class="text-xs text-slate-600 italic">"No editable parameters yet."</p>
         }
