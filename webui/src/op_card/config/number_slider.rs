@@ -17,7 +17,7 @@ pub fn NumberSlider(
     let shown = move || display.run(value.get());
 
     view! {
-        <label class="text-xs text-slate-400 block">
+        <label class="text-xs text-slate-400 block p-3">
             {label}": "
             <input
                 type="number"

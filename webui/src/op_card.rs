@@ -3,6 +3,7 @@ use crate::{EditPayload, OpRow};
 use config::op_config_view;
 use leptos::html;
 use leptos::prelude::*;
+use leptos_use::{UseElementSizeReturn, use_element_size};
 use pixelizer_core::Operation;
 
 fn op_label(op: &Operation) -> &'static str {
@@ -33,15 +34,11 @@ pub fn OpCard(
 
     let label = op_label(&op);
 
-    // The collapse animation. We drive the wrapper's max-height from a signal.
-    // When open: measure the content's scrollHeight and use that. When closed: 0.
+    let UseElementSizeReturn { height, .. } = use_element_size(content_ref);
+
     let max_height = move || {
         if open.get() {
-            // Read the real DOM node's scroll height, in px.
-            content_ref
-                .get()
-                .map(|el| format!("{}px", el.scroll_height()))
-                .unwrap_or_else(|| "1000px".to_string()) // fallback before first measure
+            format!("{}px", height.get())
         } else {
             "0px".to_string()
         }
@@ -83,8 +80,10 @@ pub fn OpCard(
                 style:max-height=max_height
             >
                 // Inner content is what is measured. Its natural height is the target.
-                <div node_ref=content_ref class="p-3">
-                    {op_config_view(id, &op, rows, on_edit)}
+                <div node_ref=content_ref>
+                    <div class="p-3">
+                        {op_config_view(id, &op, rows, on_edit)}
+                    </div>
                 </div>
             </div>
         </div>

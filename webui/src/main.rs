@@ -10,6 +10,20 @@ pub struct OpRow {
     op: Operation,
 }
 
+pub struct Palettes {
+    palettes: Vec<(String, Vec<String>)>,
+}
+
+impl Palettes {
+    fn load() -> Self {
+        let raw = include_str!("../palettes.yaml");
+        let map: std::collections::HashMap<String, Vec<String>> =
+            yaml_serde::from_str(raw).expect("palettes.yaml failed to parse");
+        let mut palettes: Vec<(String, Vec<String>)> = map.into_iter().collect();
+        palettes.sort_by(|a, b| a.0.cmp(&b.0));
+        Palettes { palettes }
+    }
+}
 const ALL_LABELS: &[&str] = &[
     "Downsample",
     "Palette Map",
@@ -126,5 +140,8 @@ fn PipelineList() -> impl IntoView {
 
 fn main() {
     console_error_panic_hook::set_once();
-    mount_to_body(PipelineList);
+    mount_to_body(|| {
+        provide_context(StoredValue::new(Palettes::load()));
+        view! { <PipelineList/> }
+    });
 }
