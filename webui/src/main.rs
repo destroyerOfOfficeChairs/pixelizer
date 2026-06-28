@@ -28,6 +28,20 @@ impl Palettes {
     }
 }
 
+#[component]
+fn app() -> impl IntoView {
+    view! {
+        <div>
+            <div> // This will be on the left side of the screen
+                <PipelineList/>
+            </div>
+            <div> // And this will be on the right
+                <Viewport/> // Gotta implement this
+            </div>
+        </div>
+    }
+}
+
 fn main() {
     console_error_panic_hook::set_once();
     mount_to_body(|| {

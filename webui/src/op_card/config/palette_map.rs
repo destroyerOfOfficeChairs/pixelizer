@@ -7,10 +7,23 @@ pub fn palette_map_config(
     rows: ReadSignal<Vec<OpRow>>,
     on_edit: Callback<EditPayload>,
 ) -> AnyView {
-    let palettes = use_context::<StoredValue<Palettes>>().expect("You forgot to provide palettes.");
+    // prefix with an underscore for now.
+    let _colors_to_map = Signal::derive(move || {
+        rows.get()
+            .iter()
+            .find(|r| r.id == id)
+            .and_then(|r| match &r.op {
+                Operation::PaletteMap { colors, dither: _ } => Some(colors.clone()),
+                _ => None,
+            })
+            .unwrap_or(vec!["#000000".to_owned(), "#ffffff".to_owned()])
+    });
+
+    let preloaded_palettes =
+        use_context::<StoredValue<Palettes>>().expect("You forgot to provide palettes.");
 
     // Build the <option> list by reading through the handle.
-    let options = palettes.with_value(|p| {
+    let options = preloaded_palettes.with_value(|p| {
         p.palettes
             .iter()
             .map(|(name, _colors)| {
@@ -22,7 +35,7 @@ pub fn palette_map_config(
     let on_change = move |ev| {
         let chosen = event_target_value(&ev);
         // Look up the chosen palette's colors, then push an edit.
-        let colors = palettes.with_value(|p| {
+        let colors = preloaded_palettes.with_value(|p| {
             p.palettes
                 .iter()
                 .find(|(name, _)| *name == chosen)
