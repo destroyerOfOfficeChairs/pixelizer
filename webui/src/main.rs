@@ -6,8 +6,8 @@ use pipeline_list::PipelineList;
 use pixelizer_core::Operation;
 
 use base64::{Engine, engine::general_purpose::STANDARD};
+use pixelizer_core::Pipeline;
 use pixelizer_core::image::{self, ImageFormat};
-use pixelizer_core::{Image, Pipeline};
 use std::io::Cursor;
 
 pub type EditPayload = (usize, Box<dyn Fn(&mut Operation)>);
