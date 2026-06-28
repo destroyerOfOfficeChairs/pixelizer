@@ -4,9 +4,11 @@ A browser front-end for the `pixelizer-core` pixel-art image-processing pipeline
 
 This crate is the `webui` member of the `pixelizer` Cargo workspace, alongside `core` (the processing library) and `cli`.
 
+For planned features and work in progress, see [ROADMAP.md](ROADMAP.md).
+
 ## Status
 
-Phase 1 is complete: the full data path works end to end. You can build a pipeline, upload an image, run it, and see the output. The pipeline currently runs **synchronously on the main thread**, so the UI freezes for the duration of a run — noticeable on large images or expensive operation orders (e.g. posterize before downsample). Removing that freeze is the main near-term task (see [Web workers](#web-workers-planned)).
+The full data path works end to end: build a pipeline, upload an image, run it, see the output. The pipeline currently runs **synchronously on the main thread**, so the UI freezes for the duration of a run — noticeable on large images or expensive operation orders (e.g. posterize before downsample). Removing that freeze (via a web worker) is the main near-term task; see the ROADMAP.
 
 ## Running locally
 
@@ -58,8 +60,8 @@ For this app the compute is the bottleneck rather than the download, so `opt-lev
 
 ```
 src/
-├── main.rs              App root: shared state, Viewport, image decode/encode helpers, mount
-├── pipeline_list.rs     PipelineList: the ordered list of op cards + add-operation control
+├── main.rs              App root: shared state, Viewport, image decode/encode helpers, mount, Palettes loader
+├── pipeline_list.rs     PipelineList: ordered list of op cards, add-operation control, id allocation, move/remove/edit handlers
 ├── op_card.rs           OpCard: one card — header bar + collapsible animated settings area
 └── op_card/
     ├── config.rs        op_config_view: dispatches an Operation to its config sub-view
@@ -77,22 +79,24 @@ src/
 
 Shared state lives at the `App` root and flows down to children, so siblings never reach into one another:
 
-- `rows: Signal<Vec<OpRow>>` — the ordered pipeline. Each `OpRow` is an `{ id, op: Operation }`; the `id` is a stable key for Leptos's keyed `<For/>` so reordering animates correctly. Owned by `App`, passed to `PipelineList` as read/write halves.
+- `rows` — the ordered pipeline, held as a `signal(Vec<OpRow>)` split into read/write halves (`rows: ReadSignal`, `set_rows: WriteSignal`) and passed to `PipelineList`. Each `OpRow` is an `{ id, op: Operation }`; the `id` is a stable key for Leptos's keyed `<For/>` so reordering animates correctly.
 - `source: RwSignal<Option<Image>>` — the decoded source image (`pixelizer_core::Image`, an `RgbaImage`). Written by the Viewport's file input, read by the run handler.
 - `output_url: RwSignal<Option<String>>` — the processed result as a PNG `data:` URL. Written by the run handler, read by the Viewport's `<img>`.
 
+`PipelineList` owns the per-row mechanics: `next_id` (a `StoredValue` counter) allocates stable ids for new rows; `move_op` reorders by swapping; `remove_op` retains-by-id; and `edit_op` applies an incoming mutation closure to the matching row.
+
 Editing an operation's settings goes through a single `on_edit` callback typed as `EditPayload = (usize, Box<dyn Fn(&mut Operation)>)`: a config card sends up the row id plus a closure that mutates the matching `Operation` in place. This keeps each card decoupled from how `rows` is stored.
 
-The palette list is loaded once at startup from `palettes.yaml` (compiled into the binary via `include_str!`), parsed into a `Palettes` struct, and provided through Leptos context as a `StoredValue<Palettes>`. The Palette Map config reads it back with `use_context`.
+The palette list is loaded once at startup from `palettes.yaml` (compiled into the binary via `include_str!`). `Palettes::load` parses it into a `HashMap<String, Vec<String>>`, then collects into a `Vec<(String, Vec<String>)>` sorted by name — so palettes always present in alphabetical order. The result is provided through Leptos context as a `StoredValue<Palettes>`, which the Palette Map config reads back with `use_context`.
 
 ### The run path
 
 When **Run pipeline** is clicked:
 
-1. The source `RgbaImage` is read from the `source` signal.
+1. The source `RgbaImage` is read from the `source` signal (the button is disabled while `source` is `None`).
 2. The `rows` are collected into a `Pipeline { operations }`.
 3. `pixelizer_core::apply(&pipeline, image)` runs the operations in order, each consuming the previous image by value and returning a new one.
-4. The result is PNG-encoded, base64'd into a `data:` URL, and stored in `output_url`.
+4. The result is PNG-encoded, base64'd into a `data:` URL, and stored in `output_url`. Errors are logged rather than surfaced in the UI.
 5. The Viewport's `<img>` reactively displays it.
 
 Image decoding (`load_from_memory` → `to_rgba8`) and encoding (PNG → base64 data URL) are kept as plain functions free of any Leptos or DOM types. This isolation is deliberate: it's what will let the heavy work move into a web worker later with minimal disruption to the UI code.
@@ -102,49 +106,12 @@ Image decoding (`load_from_memory` → `to_rgba8`) and encoding (PNG → base64 
 - `leptos` (csr) — reactive UI.
 - `leptos-use` — `use_element_size` drives the op card's collapse animation by measuring content height.
 - `gloo-file` — async reading of the uploaded file's bytes.
-- `image` (re-exported from `pixelizer-core`) — decode/encode, kept on the same version as core.
+- `pixelizer-core` (workspace path dep) — the pipeline library; also re-exports `image`, so decode/encode stay on the same `image` version as core.
 - `base64` — encoding the result for the `data:` URL.
 - `yaml_serde` — parsing `palettes.yaml`.
-
-## Planned features
-
-The following are not yet implemented. Roughly ordered from most self-contained to most involved.
-
-### Viewport improvements
-
-- **Show the source image immediately on upload**, before any run. Currently nothing is displayed until the pipeline produces an `output_url`; the Viewport should fall back to rendering the `source` image when no output exists yet.
-- **Fit the image within the visible area** so it never overflows the screen, regardless of its dimensions.
-
-### Palette Map op card
-
-This is the most feature-dense card and the main UI build-out:
-
-- **Color swatches**: render the current palette as a row of colored squares instead of (or alongside) the dropdown.
-- **Add-swatch affordance**: an empty `+` swatch the user clicks to add a new color.
-- **Custom color picker**: clicking a swatch (including the `+`) opens a color picker. The native browser picker is inadequate, so this is a from-scratch component.
-- **Dithering configuration**: surface the `DitherConfig` options (Floyd–Steinberg, Atkinson, JJN, Bayer4/8, with their `bleed`/`clamp`/`strength` parameters) on this same card.
-
-### Droppable palette files
-
-Allow dropping in a palette file so colors don't have to be chosen one at a time. Today the only palettes available are the pre-compiled options baked in from `palettes.yaml`; this would let users supply their own at runtime.
-
-### Drag-and-drop reordering
-
-Make op cards reorderable by dragging, behaving like dnd-kit's sortable (pointer-driven drag with a lifted card and the rest animating out of the way). The current up/down arrow buttons are the placeholder for this. The card header bar is already marked as the future drag handle.
-
-### Per-op preview
-
-Let the user click (or hover) an op card to see what that specific step does to the image — an intermediate preview of the pipeline up to and including that operation.
-
-### Web workers (planned)
-
-The pipeline currently runs on the main thread, freezing the UI for the length of a run. Moving it to a web worker keeps the UI responsive. A web worker is a separate thread with no shared memory, so this is a request/response restructuring rather than a drop-in swap. Rough shape:
-
-1. **A worker entry point** — a separate compiled artifact the browser loads independently. It receives a message containing the source image bytes and the pipeline, runs the existing decode → apply → encode chain, and posts the resulting PNG data URL back. The already-isolated, DOM-free helper functions move here largely unchanged.
-2. **The run handler becomes a send**, not a compute. Instead of calling `apply` inline, it serializes the inputs and posts them to the worker, then returns immediately — this is what removes the freeze.
-3. **A result handler** receives the worker's reply and writes `output_url`. The write-to-signal migrates out of the click handler and into this message handler, because the result now arrives asynchronously rather than as a return value.
-
-What crosses the boundary is serialized, so a live `RgbaImage` can't be sent; the plan is to send the original encoded file bytes plus the pipeline and let the worker own the whole decode/apply/encode chain, sending back a string. The [`gloo-worker`](https://docs.rs/gloo-worker/) crate provides a typed request/response abstraction over raw `postMessage` and is the likely path. This is the fiddliest part of the project — it requires a second build target and getting Trunk to emit and serve both artifacts.
+- `wasm-bindgen-futures` — `spawn_local` for the async file read.
+- `web-sys` — DOM types for the file input.
+- `console_error_panic_hook` — readable panics in the browser console.
 
 ## Design notes
 
