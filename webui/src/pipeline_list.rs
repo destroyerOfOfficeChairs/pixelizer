@@ -1,7 +1,8 @@
 use crate::{EditPayload, OpRow, op_card};
 use leptos::prelude::*;
 use op_card::OpCard;
-use pixelizer_core::{Operation, Pipeline};
+// use pixelizer_core::{Operation, Pipeline};
+use pixelizer_core::Operation;
 
 const ALL_LABELS: &[&str] = &[
     "Downsample",
@@ -31,12 +32,11 @@ fn default_op(label: &str) -> Operation {
 }
 
 #[component]
-pub fn PipelineList() -> impl IntoView {
+pub fn PipelineList(
+    rows: ReadSignal<Vec<OpRow>>,
+    set_rows: WriteSignal<Vec<OpRow>>,
+) -> impl IntoView {
     let next_id = StoredValue::new(1);
-    let (rows, set_rows) = signal(vec![OpRow {
-        id: 0,
-        op: Operation::Downsample { pixel_size: 8 },
-    }]);
 
     let move_op = move |id: usize, dir: i32| {
         set_rows.update(|rows| {
@@ -70,14 +70,14 @@ pub fn PipelineList() -> impl IntoView {
         });
     });
 
-    let pipeline_json = move || {
-        let ops: Vec<Operation> = rows.get().into_iter().map(|r| r.op).collect();
-        let pipeline = Pipeline { operations: ops };
-        serde_json::to_string_pretty(&pipeline).unwrap_or_else(|e| format!("error: {e}"))
-    };
+    // let pipeline_json = move || {
+    //     let ops: Vec<Operation> = rows.get().into_iter().map(|r| r.op).collect();
+    //     let pipeline = Pipeline { operations: ops };
+    //     serde_json::to_string_pretty(&pipeline).unwrap_or_else(|e| format!("error: {e}"))
+    // };
 
     view! {
-        <div class="max-w-md mx-auto p-4 flex flex-col gap-3">
+        <div class="max-w-md p-4 flex flex-col gap-3">
             <h3 class="text-lg font-bold text-teal-300">"Pipeline"</h3>
             <div class="flex flex-col gap-3">
             <For
@@ -110,8 +110,8 @@ pub fn PipelineList() -> impl IntoView {
                     <option value=*l>{*l}</option>
                 }).collect_view()}
             </select>
-            <h4 class="text-sm font-bold text-teal-300 mt-2">"Pipeline JSON"</h4>
-            <pre class="text-xs bg-slate-950 text-slate-300 p-3 rounded overflow-x-auto">{pipeline_json}</pre>
+            // <h4 class="text-sm font-bold text-teal-300 mt-2">"Pipeline JSON"</h4>
+            // <pre class="text-xs bg-slate-950 text-slate-300 p-3 rounded overflow-x-auto">{pipeline_json}</pre>
         </div>
     }
 }
