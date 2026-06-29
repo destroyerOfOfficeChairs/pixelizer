@@ -2199,6 +2199,7 @@ dependencies = [
  "leptos-use",
  "pixelizer-core",
  "serde_json",
+ "serde_yaml",
  "wasm-bindgen-futures",
  "web-sys",
  "yaml_serde",

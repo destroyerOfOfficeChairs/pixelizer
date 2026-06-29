@@ -70,10 +70,10 @@ pub fn PipelineList(
         });
     });
 
-    let pipeline_json = move || {
+    let pipeline_yaml = move || {
         let ops: Vec<Operation> = rows.get().into_iter().map(|r| r.op).collect();
         let pipeline = Pipeline { operations: ops };
-        serde_json::to_string_pretty(&pipeline).unwrap_or_else(|e| format!("error: {e}"))
+        serde_yaml::to_string(&pipeline).unwrap_or_else(|e| format!("error: {e}"))
     };
 
     view! {
@@ -110,8 +110,8 @@ pub fn PipelineList(
                     <option value=*l>{*l}</option>
                 }).collect_view()}
             </select>
-            <h4 class="text-sm font-bold text-teal-300 mt-2">"Pipeline JSON"</h4>
-            <pre class="text-xs bg-slate-950 text-slate-300 p-3 rounded overflow-x-auto">{pipeline_json}</pre>
+            <h4 class="text-sm font-bold text-teal-300 mt-2">"Pipeline YAML"</h4>
+            <pre class="text-xs bg-slate-950 text-slate-300 p-3 rounded overflow-x-auto">{pipeline_yaml}</pre>
         </div>
     }
 }
