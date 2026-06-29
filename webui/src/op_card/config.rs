@@ -1,17 +1,8 @@
-mod blur;
-mod downsample;
-mod normalize;
-mod number_slider;
+mod generic_config;
 mod palette_map;
-mod posterize;
-mod upscale;
 
-use blur::blur_config;
-use downsample::downsample_config;
-use normalize::normalize_config;
+use generic_config::generic_op_config;
 use palette_map::palette_map_config;
-use posterize::posterize_config;
-use upscale::upscale_config;
 
 use crate::{EditPayload, OpRow};
 use leptos::prelude::*;
@@ -24,11 +15,13 @@ pub fn op_config_view(
     on_edit: Callback<EditPayload>,
 ) -> AnyView {
     match op {
-        Operation::Blur { .. } => blur_config(id, rows, on_edit),
-        Operation::Posterize { .. } => posterize_config(id, rows, on_edit),
-        Operation::Normalize { .. } => normalize_config(id, rows, on_edit),
-        Operation::Downsample { .. } => downsample_config(id, rows, on_edit),
-        Operation::Upscale { .. } => upscale_config(id, rows, on_edit),
+        Operation::Posterize { .. }
+        | Operation::Normalize { .. }
+        | Operation::Downsample { .. }
+        | Operation::Upscale { .. }
+        | Operation::Blur { .. } => generic_op_config(id, op, rows, on_edit),
+
+        // --- special-case ---
         Operation::PaletteMap { .. } => palette_map_config(id, rows, on_edit),
     }
 }

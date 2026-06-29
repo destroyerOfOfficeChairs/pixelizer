@@ -80,6 +80,7 @@ operations:
 - `color_utils.rs` — OkLab conversion, palette preparation, hex parsing.
 - `palette_map.rs` — Three palette-mapping algorithms (flat, error-diffusion, ordered).
 - `posterize.rs`, `blur.rs`, `normalize.rs`, `downsample.rs`, `upscale.rs` — One per pipeline operation.
+- `ui_api.rs` — Descriptor tables (parameter names, types, defaults, ranges) that let a frontend render operation and dither config UI without hardcoding it. See [DESIGN.md](DESIGN.md).
 
 For the rationale behind these design choices — perceptual color matching, linear-light error diffusion, operation ordering, and more — see [DESIGN.md](DESIGN.md). For notes on a possible GPU backend, see [GPU_NOTES.md](GPU_NOTES.md).
 

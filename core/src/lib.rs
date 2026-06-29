@@ -5,6 +5,7 @@ mod downsample;
 mod normalize;
 mod palette_map;
 mod posterize;
+pub mod ui_api;
 mod upscale;
 use blur::blur;
 use downsample::downsample;

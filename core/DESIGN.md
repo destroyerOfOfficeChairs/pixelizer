@@ -25,6 +25,19 @@ The same gamma concern applies to any operation that averages pixels, not just d
 
 Each representation serves a different purpose. We compute them once during palette setup and pass references to them through the inner loops.
 
+## Why the core crate carries UI descriptors
+
+`ui_api.rs` holds descriptor tables: for each operation and each dither variant, the list of its parameters with their names, types, defaults, and valid ranges. This is metadata *about* the config types, sitting in the processing library — which is initially surprising, since core does no rendering and knows nothing about any frontend.
+
+The reason is single-source-of-truth. A frontend building config controls needs to know that `blur` has one `f32` parameter called `sigma` that sensibly ranges roughly 0–10, that `posterize`'s `levels` is an integer with a floor of 2, and so on. Without descriptors, every frontend restates that knowledge in its own UI code, and the two drift: add a parameter to an operation here and the UI silently keeps offering the old set. Putting the descriptors next to the `Operation` and `DitherConfig` enums means the parameter list lives in one place, beside the types it describes, and a frontend derives its controls from that rather than duplicating it.
+
+This is deliberately general — nothing in `ui_api.rs` references Leptos, the DOM, or any specific UI toolkit; the types are plain data. In principle any frontend could consume them. In practice there is one consumer today, the `webui` crate, which renders a generic config card per operation by walking these tables. So treat `ui_api` as "a descriptor API any frontend could use, currently used by webui" rather than a finished public contract — its shape may still move as the one real consumer teaches us what it needs.
+
+Two limits worth recording, both consequences of Rust having no runtime reflection:
+
+- **The tables are hand-maintained, not derived from the enums.** Nothing forces `ui_api` to stay in sync with `Operation`/`DitherConfig`; adding an operation means adding its descriptor row by hand. The descriptor's parameter `key` strings must match the enum's serde field names exactly, because that key is what a frontend uses to read and write the field (see below). A mismatch is a silent bug, not a compile error — the most fragile seam in this design.
+- **Serde is the bridge between descriptor values and real config types.** A frontend doesn't hand-write a "tag → variant" constructor. Because `Operation` and `DitherConfig` already derive `Serialize`/`Deserialize` with internal tags (`type` and `algorithm`), a frontend can read a field by serializing an op to a JSON object and reading it by key, and write one back by overwriting that key and deserializing. This reuses the serialization the crate already has rather than maintaining a second, parallel construction path — which is why the descriptor tables only need to carry *metadata*, not logic.
+
 ## Operation order matters
 
 The pipeline is just an ordered list, but the order has real consequences:

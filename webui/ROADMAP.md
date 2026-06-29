@@ -10,12 +10,12 @@ The single biggest item — moving the pipeline off the main thread — is invol
 
 ### Palette Map op card — swatch UI
 
-The Palette Map card currently exposes only a `<select>` dropdown of the baked-in named palettes (`palette_map.rs`). The richer swatch-based editor is partially wired: `palette_map_config` already derives the current palette's colors into a `_colors_to_map` signal (presently underscore-prefixed and unused), which is the intended data source for rendering swatches. The remaining build-out, roughly in dependency order:
+The Palette Map card currently exposes only a `<select>` dropdown of the baked-in named palettes (`palette_map.rs`). It is the one card untouched by the descriptor-driven refactor, since palette colors and dither config aren't plain scalars. The richer swatch-based editor is the remaining build-out, roughly in dependency order:
 
-- **Color swatches** — render the current palette as a row of colored squares (driven by the already-derived colors signal), instead of or alongside the dropdown.
+- **Color swatches** — render the current palette as a row of colored squares, instead of or alongside the dropdown.
 - **Add-swatch affordance** — an empty `+` swatch the user clicks to add a new color.
 - **Custom color picker** — clicking a swatch (including the `+`) opens a picker. The native browser picker is inadequate, so this is a from-scratch component.
-- **Dithering configuration** — surface the `DitherConfig` options (Floyd–Steinberg, Atkinson, JJN, Bayer4/8, with their `bleed`/`clamp`/`strength` parameters) on this same card.
+- **Dithering configuration** — surface the `DitherConfig` options (Floyd–Steinberg, Atkinson, JJN, Bayer4/8, with their `bleed`/`clamp`/`strength` parameters) on this same card. Core's `ui_api` already exposes a `DITHER_VARIANTS` descriptor table parallel to the operation table, so the per-variant parameter widgets can reuse the same descriptor-driven rendering the generic op card uses (`IntSlider`/`FloatSlider`, plus a still-to-be-built bool toggle for `clamp`). What's bespoke here is the layer above the params: an algorithm-picker dropdown that swaps which variant's parameters show, and assembling the chosen variant back into a `DitherConfig` (the variant tag plus its params, via the same serde bridge). This is the first place a bool parameter actually needs rendering, so it's where a reusable `BoolToggle` component gets extracted.
 
 This is the most feature-dense card and the main remaining UI build-out.
 
