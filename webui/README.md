@@ -56,24 +56,6 @@ For this app the compute is the bottleneck rather than the download, so `opt-lev
 
 ## How it works
 
-### Module layout
-
-```
-src/
-├── main.rs              App root: shared state, Viewport, image decode/encode helpers, mount, Palettes loader
-├── pipeline_list.rs     PipelineList: ordered list of op cards, add-operation control, id allocation, move/remove/edit handlers
-├── op_card.rs           OpCard: one card — header bar + collapsible animated settings area
-└── op_card/
-    ├── config.rs        op_config_view: dispatches an Operation to its config view
-    └── config/
-        ├── generic_config.rs   Renders any scalar-parameter op from core's ui_api descriptor tables
-        ├── generic_config/
-        │   └── sliders.rs      IntSlider / FloatSlider, plus the step→decimals helper
-        └── palette_map.rs      The one hand-written card (palette colors + dither are not plain scalars)
-```
-
-Most operation config cards are no longer hand-written. A single `generic_config` view reads the parameter descriptors that `pixelizer_core::ui_api` exposes for each operation — name, type, default, range — and renders a slider per parameter. `config.rs` routes all the scalar-parameter operations (downsample, upscale, posterize, blur, normalize) through that one view; only `palette_map` keeps a bespoke card, because its palette colors (a `Vec<String>` with a custom swatch UI) and its `dither` sub-config aren't plain scalars. See [State and data flow](#state-and-data-flow) for how the generic card reads and writes operation fields.
-
 ### State and data flow
 
 Shared state lives at the `App` root and flows down to children, so siblings never reach into one another:
@@ -86,26 +68,23 @@ Shared state lives at the `App` root and flows down to children, so siblings nev
 
 Editing an operation's settings goes through a single `on_edit` callback typed as `EditPayload = (usize, Box<dyn Fn(&mut Operation)>)`: a config card sends up the row id plus a closure that mutates the matching `Operation` in place. This keeps each card decoupled from how `rows` is stored.
 
-The generic config card uses this same seam, driven entirely by core's descriptor tables. For each parameter the descriptor names (e.g. `sigma`, `levels`), the card:
-
-- **reads** the current value by serializing the live `Operation` to a `serde_json` object and looking up the parameter's key — so it never matches on operation variants by hand;
-- **writes** by sending up a closure that re-serializes the op, overwrites just that one key with the new value, and deserializes back into an `Operation`.
-
-Because `Operation` already derives serde with a `type` tag, this read/write-by-key reuses the existing serialization instead of hand-writing a field accessor per operation. The closure-in-place write is what keeps `palette_map`'s `colors` and `dither` safe even when its scalar fields are edited generically: a write names exactly one key and leaves the rest of the op untouched. The parameter's `key` in the descriptor table must match the operation's serde field name exactly — that string equality is the contract the whole generic path rests on.
-
 The palette list is loaded once at startup from `palettes.yaml` (compiled into the binary via `include_str!`). `Palettes::load` parses it into a `HashMap<String, Vec<String>>`, then collects into a `Vec<(String, Vec<String>)>` sorted by name — so palettes always present in alphabetical order. The result is provided through Leptos context as a `StoredValue<Palettes>`, which the Palette Map config reads back with `use_context`.
 
 ### The run path
 
-When **Run pipeline** is clicked:
+The **Run pipeline** button lives in `PipelineList`, but the run logic stays at the `App` root: `App` passes `PipelineList` an `on_run: Callback<()>` plus a `can_run: Signal<bool>` (derived from `source`, driving the button's disabled state). The button is a trigger; `App` owns everything the run touches, so `PipelineList` never sees the decoded image or the output URL. When the button is clicked:
 
-1. The source `RgbaImage` is read from the `source` signal (the button is disabled while `source` is `None`).
+1. The source `RgbaImage` is read from the `source` signal (the button is disabled while `source` is `None`, via `can_run`).
 2. The `rows` are collected into a `Pipeline { operations }`.
 3. `pixelizer_core::apply(&pipeline, image)` runs the operations in order, each consuming the previous image by value and returning a new one.
 4. The result is PNG-encoded, base64'd into a `data:` URL, and stored in `output_url`. Errors are logged rather than surfaced in the UI.
 5. The Viewport's `<img>` reactively displays it.
 
 Image decoding (`load_from_memory` → `to_rgba8`) and encoding (PNG → base64 data URL) are kept as plain functions free of any Leptos or DOM types. This isolation is deliberate: it's what will let the heavy work move into a web worker later with minimal disruption to the UI code.
+
+### Pipeline YAML preview
+
+Below the run button, a toggle reveals a live YAML serialization of the current pipeline, with a copy-to-clipboard button. It's produced by `serde_yaml::to_string` on the same `Pipeline` the run path builds, so the output is exactly what the `cli` crate parses — copy it, save it as a `.yaml`, and it runs unmodified through the CLI. The serialization is lazy: it only runs while the preview is shown (and re-runs reactively as the pipeline changes), so it costs nothing when hidden.
 
 ## Dependencies of note
 
@@ -115,14 +94,15 @@ Image decoding (`load_from_memory` → `to_rgba8`) and encoding (PNG → base64 
 - `pixelizer-core` (workspace path dep) — the pipeline library; also re-exports `image`, so decode/encode stay on the same `image` version as core.
 - `base64` — encoding the result for the `data:` URL.
 - `serde_json` — the read/write-by-key bridge in the generic config card (serialize an `Operation`, edit one field, deserialize back).
+- `serde_yaml` — serializing the pipeline for the YAML preview; same crate and version the `cli` crate parses with, so output round-trips.
 - `yaml_serde` — parsing `palettes.yaml`.
-- `wasm-bindgen-futures` — `spawn_local` for the async file read.
-- `web-sys` — DOM types for the file input.
+- `gloo-timers` — the brief revert delay on the YAML "Copied!" feedback.
+- `wasm-bindgen-futures` — `spawn_local` for the async file read and the clipboard write.
+- `web-sys` — DOM types for the file input and the clipboard API (`Navigator`, `Clipboard` features).
 - `console_error_panic_hook` — readable panics in the browser console.
 
 ## Design notes
 
 - **Rust/WASM as the primary medium**, with JavaScript treated as a thin interop edge only. No application logic lives in JS.
 - **Owned-value pipeline**: each operation takes the image by value and returns a new one. This matches what the operations physically do (each allocates a new image, often of different dimensions) and means no in-place mutation or cloning inside `apply` — the image is *moved* through the chain.
-- **State lifted to the root** so the run trigger, the pipeline, and the viewport coordinate only through parent-held signals.
-- **Config cards are descriptor-driven, not hand-written.** The per-operation config files were replaced by one generic card that walks core's `ui_api` descriptor tables. Adding a scalar parameter to an operation — or a whole new scalar operation — needs no UI change here: it surfaces automatically once core's descriptor table lists it. The cost of that leverage is the key-name contract noted above (descriptor `key` must equal the serde field name) and the fact that genuinely non-scalar inputs (`palette_map`'s colors and dither) still need bespoke UI.
+- **State lifted to the root** so the run trigger, the pipeline, and the viewport coordinate only through parent-held signals. The run button illustrates this: it renders in `PipelineList` but fires an `on_run` callback owned by `App`, so the child triggers the action without holding the `source`/`output_url` state the action reads and writes.

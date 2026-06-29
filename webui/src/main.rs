@@ -67,46 +67,63 @@ fn Viewport(
         }
     };
 
+    // What to display: prefer the processed output; fall back to the decoded
+    // source so the image shows immediately on upload, before any run.
+    // Returns an Option<String> data URL. Re-runs only when output_url or
+    // source changes — so the source re-encode happens once per new image,
+    // not on every render.
+    let display_url = move || {
+        output_url
+            .get()
+            .or_else(|| source.get().as_ref().map(encode_to_data_url))
+    };
+
     view! {
         <div class="p-4 flex flex-col gap-3">
             <input type="file" accept="image/*" on:change=on_file
                 class="text-sm text-slate-300"/>
-            {move || output_url.get().map(|url| view! {
-                <img src=url class="max-w-full border border-slate-700 rounded"/>
+            {move || display_url().map(|url| view! {
+                <img
+                    src=url
+                    class="max-w-full max-h-[80vh] object-contain border border-slate-700 rounded [image-rendering:pixelated]"
+                />
             })}
         </div>
     }
 }
-
 #[component]
 fn App() -> impl IntoView {
     let (rows, set_rows) = signal(vec![OpRow {
         id: 0,
         op: Operation::Downsample { pixel_size: 8 },
     }]);
-    let source = RwSignal::new(None::<pixelizer_core::Image>); // decoded RgbaImage
-    let output_url = RwSignal::new(None::<String>); // PNG data URL for display
-    let run = move |_| {
+    let source = RwSignal::new(None::<pixelizer_core::Image>);
+    let output_url = RwSignal::new(None::<String>);
+
+    // Run logic stays here — it owns source/output_url. Exposed as a callback.
+    let on_run = Callback::new(move |_: ()| {
         let Some(img) = source.get() else { return };
         let ops: Vec<Operation> = rows.get().into_iter().map(|r| r.op).collect();
         let pipeline = Pipeline { operations: ops };
-        // PHASE 1: synchronous — UI freezes here for a few seconds. Known.
+        // synchronous — UI freezes here for a few seconds. Known.
         match pixelizer_core::apply(&pipeline, img) {
             Ok(result) => output_url.set(Some(encode_to_data_url(&result))),
             Err(e) => leptos::logging::error!("pipeline failed: {e:?}"),
         }
-    };
+    });
+
+    // Whether a run is currently possible (no image = can't run).
+    let can_run = Signal::derive(move || source.get().is_some());
+
     view! {
         <div class="flex gap-6 p-6 items-start">
             <div class="flex flex-col gap-3">
-                <PipelineList rows=rows set_rows=set_rows/>
-                <button
-                    class="bg-teal-600 hover:bg-teal-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold rounded-md px-4 py-2"
-                    prop:disabled=move || source.get().is_none()
-                    on:click=run
-                >
-                    "Run pipeline"
-                </button>
+                <PipelineList
+                    rows=rows
+                    set_rows=set_rows
+                    on_run=on_run
+                    can_run=can_run
+                />
             </div>
             <div class="flex-1">
                 <Viewport source=source output_url=output_url/>
@@ -114,7 +131,6 @@ fn App() -> impl IntoView {
         </div>
     }
 }
-
 fn main() {
     console_error_panic_hook::set_once();
     mount_to_body(|| {

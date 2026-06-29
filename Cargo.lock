@@ -2195,6 +2195,7 @@ dependencies = [
  "base64",
  "console_error_panic_hook",
  "gloo-file",
+ "gloo-timers",
  "leptos",
  "leptos-use",
  "pixelizer-core",

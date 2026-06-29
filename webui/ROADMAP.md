@@ -10,12 +10,12 @@ The single biggest item — moving the pipeline off the main thread — is invol
 
 ### Palette Map op card — swatch UI
 
-The Palette Map card currently exposes only a `<select>` dropdown of the baked-in named palettes (`palette_map.rs`). It is the one card untouched by the descriptor-driven refactor, since palette colors and dither config aren't plain scalars. The richer swatch-based editor is the remaining build-out, roughly in dependency order:
+The Palette Map card currently exposes only a `<select>` dropdown of the baked-in named palettes (`palette_map.rs`). The richer swatch-based editor is partially wired: `palette_map_config` already derives the current palette's colors into a `_colors_to_map` signal (presently underscore-prefixed and unused), which is the intended data source for rendering swatches. The remaining build-out, roughly in dependency order:
 
-- **Color swatches** — render the current palette as a row of colored squares, instead of or alongside the dropdown.
+- **Color swatches** — render the current palette as a row of colored squares (driven by the already-derived colors signal), instead of or alongside the dropdown.
 - **Add-swatch affordance** — an empty `+` swatch the user clicks to add a new color.
 - **Custom color picker** — clicking a swatch (including the `+`) opens a picker. The native browser picker is inadequate, so this is a from-scratch component.
-- **Dithering configuration** — surface the `DitherConfig` options (Floyd–Steinberg, Atkinson, JJN, Bayer4/8, with their `bleed`/`clamp`/`strength` parameters) on this same card. Core's `ui_api` already exposes a `DITHER_VARIANTS` descriptor table parallel to the operation table, so the per-variant parameter widgets can reuse the same descriptor-driven rendering the generic op card uses (`IntSlider`/`FloatSlider`, plus a still-to-be-built bool toggle for `clamp`). What's bespoke here is the layer above the params: an algorithm-picker dropdown that swaps which variant's parameters show, and assembling the chosen variant back into a `DitherConfig` (the variant tag plus its params, via the same serde bridge). This is the first place a bool parameter actually needs rendering, so it's where a reusable `BoolToggle` component gets extracted.
+- **Dithering configuration** — surface the `DitherConfig` options (Floyd–Steinberg, Atkinson, JJN, Bayer4/8, with their `bleed`/`clamp`/`strength` parameters) on this same card. Core's `ui_api` already exposes a `DITHER_VARIANTS` descriptor table parallel to the operation table, so the per-variant parameter widgets can reuse the same descriptor-driven rendering the generic op card uses (`IntSlider`/`FloatSlider`, plus a still-to-be-built bool toggle for `clamp`). What's bespoke here is the layer above the params: an algorithm-picker dropdown that swaps which variant's parameters show, and assembling the chosen variant back into a `DitherConfig` via the same serde bridge. This is the first place a bool parameter actually needs rendering, so it's where a reusable `BoolToggle` component gets extracted.
 
 This is the most feature-dense card and the main remaining UI build-out.
 
@@ -76,3 +76,23 @@ This is the fiddliest part of the project — it requires a second build target 
 ### Small-screen / responsive layout
 
 The layout is currently desktop-oriented (a fixed two-column flex). Adapting it for phones and narrow windows is a known gap, flagged in the README's run instructions. Lower priority than the functional work above unless mobile use becomes a real target.
+
+### Pipeline import
+
+The YAML preview (with copy-to-clipboard) already covers *export* — the displayed YAML round-trips with the CLI, so copying it and saving as a `.yaml` produces valid CLI input. The missing half is *import*: paste or drop a YAML pipeline and deserialize it back into `rows`. This is the more involved half — it has to rebuild `OpRow`s with fresh ids from a parsed `Pipeline`, and decide how to handle a YAML that fails to parse (surface the error, don't clobber the current pipeline). With both halves, the YAML preview becomes a full export/import surface rather than a read-only debug view.
+
+---
+
+## Workspace-wide (not webui-only)
+
+### Consolidate YAML crates onto a single maintained dependency
+
+> Touches `cli` and `core` docs as well as `webui` — recorded here because the webui's YAML preview is what introduced a third YAML code path and surfaced the inconsistency.
+
+The workspace uses YAML three ways now: `cli` parses pipelines with `serde_yaml` 0.9.34; `webui` parses `palettes.yaml` with `yaml_serde`; and `webui` serializes pipelines for the preview, also with `serde_yaml`. That's two different YAML crates, and `serde_yaml` is deprecated/unmaintained (the author archived it in 2024). It still works — pinning it is a defensible choice for a personal project — but it's tracked tech debt, recorded here so it's a deliberate state rather than an accidental one.
+
+The cleanup: pick one maintained crate and use it everywhere, dropping `yaml_serde`. Candidate is **serde-saphyr** — modern, serde-integrated typed deserialization. Its one notable limitation (no `Value` DOM, so you can't hold a YAML `Value` in flight) doesn't affect this workspace: every YAML site here is typed (`from_str::<Pipeline>`, `from_str::<HashMap<..>>`, `to_string(&pipeline)`), none holds a `Value`. Alternatives if it doesn't fit: noyalib (drop-in `serde_yaml` compat shim that keeps a `Value` type) or yaml-rust2 (lower-level, no serde wrapper).
+
+**The one real risk to verify before committing:** the internally-tagged `DitherConfig` enum (`#[serde(tag = "algorithm")]`) must serialize and round-trip identically under the new crate. Internally-tagged enums are exactly where YAML implementations diverge. Test by serializing a `palette_map` op with each dither variant (especially a Bayer one with `strength` and a diffusion one with `bleed`/`clamp`) and confirming the output parses back through the CLI unchanged — compare against a known-good `default_pipeline.yaml`.
+
+Effort: moderate, low urgency. A deliberate tidying pass, not something to bundle into a feature.
