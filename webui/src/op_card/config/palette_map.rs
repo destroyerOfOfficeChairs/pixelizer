@@ -1,3 +1,4 @@
+use super::dither::DitherConfig;
 use crate::{EditPayload, OpRow, Palettes};
 use leptos::prelude::*;
 use pixelizer_core::Operation;
@@ -54,13 +55,20 @@ pub fn palette_map_config(
     };
 
     view! {
-        <select
-            class="bg-slate-900 border border-slate-700 rounded-md text-sm text-slate-200 p-2 w-full"
-            on:change=on_change
-        >
-            <option value="">"— pick a palette —"</option>
-            {options}
-        </select>
+        <div class="flex flex-col">
+            <div class="px-3 pt-1">
+                <select
+                    class="bg-slate-900 border border-slate-700 rounded-md text-sm \
+                           text-slate-200 p-2 w-full"
+                    on:change=on_change
+                >
+                    <option value="">"— pick a palette —"</option>
+                    {options}
+                </select>
+            </div>
+
+            <DitherConfig id=id rows=rows on_edit=on_edit/>
+        </div>
     }
     .into_any()
 }

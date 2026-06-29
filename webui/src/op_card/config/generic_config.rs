@@ -1,4 +1,5 @@
-mod sliders;
+pub(super) mod sliders;
+use crate::op_card::config::{read_f64, read_i64, typed_value};
 use crate::{EditPayload, OpRow};
 use leptos::prelude::*;
 use pixelizer_core::Operation;
@@ -6,10 +7,18 @@ use pixelizer_core::ui_api::{ParamDescriptor, ParamKind, VariantDescriptor, op_v
 use serde_json::Value;
 use sliders::{FloatSlider, IntSlider, decimals_for_step};
 
-/// Read one field as i64 (for Int params). Mirrors read_field but stays integral.
+/// Read one scalar field as f64 from the live Operation, by key.
+fn read_field(op: &Operation, key: &str) -> Option<f64> {
+    match serde_json::to_value(op) {
+        Ok(Value::Object(m)) => read_f64(&m, key),
+        _ => None,
+    }
+}
+
+/// Read one field as i64 (for Int params). Mirrors read_field but integral.
 fn read_field_i64(op: &Operation, key: &str) -> Option<i64> {
     match serde_json::to_value(op) {
-        Ok(Value::Object(m)) => m.get(key).and_then(Value::as_i64),
+        Ok(Value::Object(m)) => read_i64(&m, key),
         _ => None,
     }
 }
@@ -32,27 +41,10 @@ fn op_tag(op: &Operation) -> String {
     }
 }
 
-/// Read one scalar field's current value out of the live Operation, by key.
-/// Returns f64 for the slider regardless of the field's real type.
-fn read_field(op: &Operation, key: &str) -> Option<f64> {
-    match serde_json::to_value(op) {
-        Ok(Value::Object(m)) => m.get(key).and_then(|v| match v {
-            Value::Number(n) => n.as_f64(),
-            Value::Bool(b) => Some(if *b { 1.0 } else { 0.0 }),
-            _ => None,
-        }),
-        _ => None,
-    }
-}
-
 /// Build an edit closure that sets ONE key on the op to `new_val`, going
-/// through serde so we don't hand-write a per-field match. The closure:
-///   1. serializes the op to a JSON object,
-///   2. overwrites obj[key] with the typed value,
-///   3. deserializes back into Operation, and
-///   4. if that succeeded, overwrites *op in place.
-/// Untouched keys (colors, dither, the OTHER scalar field) ride along for free
-/// because they were in the serialized object already.
+/// through serde so we don't hand-write a per-field match. The typing of the
+/// f64 into the field's real JSON type is delegated to the shared
+/// `typed_value`; only the *path* (top-level op object) is local here.
 fn set_field_closure(
     key: &'static str,
     kind: ParamKind,
@@ -62,19 +54,7 @@ fn set_field_closure(
         let Ok(Value::Object(mut m)) = serde_json::to_value(&*op) else {
             return;
         };
-        // Re-type the f64 from the slider into the field's real JSON type.
-        let typed: Value = match kind {
-            ParamKind::Float { .. } => {
-                // Keep it a float; core fields are f32 and serde will narrow.
-                serde_json::json!(new_val)
-            }
-            ParamKind::Int { min, max, .. } => {
-                let clamped = (new_val.round() as i64).clamp(min, max);
-                serde_json::json!(clamped)
-            }
-            ParamKind::Bool { .. } => serde_json::json!(new_val != 0.0),
-        };
-        m.insert(key.to_string(), typed);
+        m.insert(key.to_string(), typed_value(kind, new_val));
         if let Ok(new_op) = serde_json::from_value::<Operation>(Value::Object(m)) {
             *op = new_op;
         }
@@ -90,7 +70,7 @@ fn param_widget(
     p: &'static ParamDescriptor,
 ) -> AnyView {
     let key = p.key; // &'static str: Copy
-    let kind = p.kind; // ParamKind: Copy (after the derive you added)
+    let kind = p.kind; // ParamKind: Copy
 
     match kind {
         // -------- Float --------
@@ -136,9 +116,6 @@ fn param_widget(
                 .unwrap_or(default)
             });
 
-            // set_field_closure still takes f64; pass the i64 through as f64.
-            // It re-clamps and rounds to i64 internally for Int kinds, so this
-            // is lossless for the integer range we care about.
             let on_commit = Callback::new(move |raw: i64| {
                 on_edit.run((id, set_field_closure(key, kind, raw as f64)));
             });
@@ -154,7 +131,7 @@ fn param_widget(
             .into_any()
         }
 
-        // -------- Bool (inline; extract BoolToggle when dither needs it) --------
+        // -------- Bool --------
         ParamKind::Bool { default } => {
             let value = Signal::derive(move || {
                 rows.with(|rs| {
@@ -186,8 +163,8 @@ fn param_widget(
         }
     }
 }
+
 /// The generic config view: render every descriptor param for this op's tag.
-/// Drop-in replacement for the per-op *_config functions, for scalar-only ops.
 pub fn generic_op_config(
     id: usize,
     op: &Operation,
