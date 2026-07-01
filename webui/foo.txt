@@ -1,0 +1,319 @@
+Config file: /home/mind/.config/helix/config.toml
+Language file: /home/mind/.config/helix/languages.toml
+Log file: /home/mind/.cache/helix/helix.log
+Runtime directories: /home/mind/.config/helix/runtime;/home/mind/src/helix/runtime;/home/mind/.cargo/bin/runtime
+[0;33mRuntime directory /home/mind/.config/helix/runtime is symlinked to: /home/mind/repos/helix/runtime[m
+[0;33mRuntime directory does not exist: /home/mind/src/helix/runtime[m
+[0;33mRuntime directory does not exist: /home/mind/.cargo/bin/runtime[m
+System clipboard provider: wayland (wl-paste+wl-copy)
+
+Language                Language servers        Debug adapter           Formatter               Highlight               Textobject              Indent                  Tags                    Rainbow                 
+ada                     ✘ ada-language-serve…   None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+adl                     None                    None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+agda                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+alloy                   None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+amber                   ✘ amber-lsp             None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+astro                   ✘ astro-ls              None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+awk                     ✘ awk-language-serve…   None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+bash                    ✘ bash-language-serv…   None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+basic                   None                    None                    None                    ✓                       ✓                       ✓                       ✓                       ✘                       
+bass                    ✘ bass                  None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+beancount               ✘ beancount-language…   None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+bibtex                  ✘ texlab                None                    ✘ bibtex-tidy           ✓                       ✘                       ✘                       ✘                       ✘                       
+bicep                   ✘ bicep-langserver      None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+bitbake                 ✘ bitbake-language-s…   None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+blade                   None                    None                    None                    ✓                       ✓                       ✘                       ✘                       ✓                       
+blueprint               ✘ blueprint-compiler…   None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+c                       ✘ clangd                ✘ lldb-dap              None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+c-sharp                 ✘ roslyn-language-se…   ✘ netcoredbg            None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+                        ✘ omnisharp             
+                        ✘ csharp-ls             
+c3                      ✘ c3-lsp                ✘ lldb-dap              None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+caddyfile               None                    None                    ✘ caddy                 ✓                       ✓                       ✓                       ✘                       ✘                       
+cairo                   ✘ cairo-language-ser…   None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+capnp                   None                    None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+cel                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+chuck                   None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+circom                  ✘ circom-lsp            None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+clarity                 ✘ clarinet              None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+clojure                 ✘ clojure-lsp           None                    ✘ cljfmt                ✓                       ✓                       ✓                       ✓                       ✓                       
+cmake                   ✘ neocmakelsp           None                    None                    ✓                       ✓                       ✓                       ✘                       ✓                       
+                        ✘ cmake-language-ser…   
+comment                 None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+concerto                None                    None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+cpon                    None                    None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+cpp                     ✘ clangd                ✘ lldb-dap              None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+crystal                 ✘ crystalline           None                    ✘ crystal               ✓                       ✓                       ✓                       ✓                       ✓                       
+                        ✘ ameba-ls              
+css                     ✓ vscode-css-languag…   None                    None                    ✓                       ✓                       ✓                       ✘                       ✓                       
+csv                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+cue                     ✘ cuelsp                None                    ✘ cue                   ✓                       ✘                       ✘                       ✘                       ✘                       
+cylc                    None                    None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+cython                  None                    None                    None                    ✓                       ✘                       ✓                       ✓                       ✘                       
+d                       ✘ serve-d               None                    ✘ dfmt                  ✓                       ✓                       ✓                       ✘                       ✘                       
+dart                    ✘ dart                  None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+dbml                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+debian                  ✘ debian-lsp            None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+devicetree              ✘ dts-lsp               None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+dhall                   ✘ dhall-lsp-server      None                    ✘ dhall                 ✓                       ✓                       ✘                       ✘                       ✘                       
+diff                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+djot                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+dockerfile              ✘ docker-langserver     None                    ✘ dockerfmt             ✓                       ✓                       ✘                       ✘                       ✘                       
+                        ✘ docker-language-se…   
+dot                     ✘ dot-language-serve…   None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+doxyfile                None                    None                    None                    ✓                       ✓                       ✓                       ✓                       ✘                       
+drools                  ✘ drools-lsp            None                    ✘ drools-fmt            ✘                       ✘                       ✘                       ✘                       ✘                       
+dtd                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+dunstrc                 None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+earthfile               ✘ earthlyls             None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+ebnf                    ✘ ebnfer                None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+edoc                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+eex                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+eiffel                  ✘ eiffel-language-se…   None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+elisp                   None                    None                    None                    ✓                       ✘                       ✘                       ✓                       ✘                       
+elixir                  ✘ elixir-ls             None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+                        ✘ expert                
+elm                     ✘ elm-language-serve…   None                    None                    ✓                       ✓                       ✘                       ✓                       ✓                       
+elvish                  ✘ elvish                None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+embedded-perl           None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+erlang                  ✘ erlang-ls             None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+                        ✘ elp                   
+esdl                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+fennel                  ✘ fennel-ls             None                    ✘ fnlfmt                ✓                       ✘                       ✘                       ✘                       ✓                       
+fga                     None                    None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+fidl                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+fish                    ✘ fish-lsp              None                    ✘ fish_indent           ✓                       ✓                       ✓                       ✘                       ✘                       
+flatbuffers             None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+forth                   ✘ forth-lsp             None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+fortran                 ✘ fortls                None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+freebasic               None                    None                    None                    ✓                       ✓                       ✓                       ✓                       ✘                       
+fsharp                  ✘ fsharp-ls             None                    None                    ✓                       ✘                       ✘                       ✘                       ✓                       
+gas                     ✘ asm-lsp               None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+gdscript                None                    None                    ✘ gdformat              ✓                       ✓                       ✓                       ✓                       ✓                       
+gherkin                 None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+ghostty                 None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+git-config              None                    None                    None                    ✓                       ✓                       ✘                       ✓                       ✘                       
+git-rebase              None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+gleam                   ✘ gleam                 None                    None                    ✓                       ✓                       ✘                       ✘                       ✓                       
+glimmer                 ✘ ember-language-ser…   None                    ✘ prettier              ✓                       ✘                       ✘                       ✘                       ✘                       
+glsl                    ✘ glsl_analyzer         None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+                        ✘ glsld                 
+gn                      None                    None                    ✘ gn                    ✓                       ✘                       ✘                       ✘                       ✘                       
+gnuplot                 None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+go                      ✘ gopls                 ✘ dlv                   None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+                        ✘ golangci-lint-lsp     
+go-format-string        None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✓                       
+godot-resource          None                    None                    None                    ✓                       ✓                       ✘                       ✓                       ✘                       
+gomod                   ✘ gopls                 None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+gotmpl                  ✘ gopls                 None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+gowork                  ✘ gopls                 None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+gpr                     ✘ ada-gpr-language-s…   None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+graphql                 ✘ graphql-language-s…   None                    None                    ✓                       ✓                       ✘                       ✘                       ✓                       
+gren                    None                    None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+groovy                  None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✓                       
+hare                    ✘ hare-lsp              None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+haskell                 ✘ haskell-language-s…   None                    None                    ✓                       ✓                       ✘                       ✓                       ✓                       
+haskell-literate        ✘ haskell-language-s…   None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+haskell-persistent      None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+haxe                    None                    None                    None                    ✓                       ✘                       ✘                       ✓                       ✘                       
+hcl                     ✘ terraform-ls          None                    None                    ✓                       ✓                       ✓                       ✘                       ✓                       
+hdl                     ✘ hdls                  None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+heex                    ✘ elixir-ls             None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+                        ✘ expert                
+hocon                   None                    None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+hoon                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+hosts                   None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+html                    ✓ tailwindcss-ls        None                    None                    ✓                       ✓                       ✓                       ✘                       ✓                       
+                        ✓ vscode-html-langua…   
+htmldjango              ✘ djlsp                 None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+                        ✓ vscode-html-langua…   
+                        ✘ superhtml             
+hurl                    None                    None                    ✘ hurlfmt               ✓                       ✓                       ✓                       ✘                       ✘                       
+hyprlang                ✘ hyprls                None                    None                    ✓                       ✘                       ✓                       ✓                       ✘                       
+iex                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+ini                     None                    None                    None                    ✓                       ✘                       ✘                       ✓                       ✘                       
+ink                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+inko                    None                    None                    ✘ inko                  ✓                       ✓                       ✓                       ✓                       ✘                       
+java                    ✘ jdtls                 None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+javascript              ✘ typescript-languag…   ✘                       None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+jjdescription           None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+jjrevset                None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+jjtemplate              None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+jq                      ✘ jq-lsp                None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+jsdoc                   None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+json                    ✓ vscode-json-langua…   None                    None                    ✓                       ✓                       ✓                       ✘                       ✓                       
+json5                   None                    None                    None                    ✓                       ✓                       ✓                       ✘                       ✓                       
+jsonnet                 ✘ jsonnet-language-s…   None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+julia                   ✘ julia                 None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+just                    ✘ just-lsp              None                    None                    ✓                       ✓                       ✓                       ✓                       ✘                       
+kcl                     ✘ kcl-lsp               None                    ✘ zoo                   ✓                       ✘                       ✘                       ✘                       ✘                       
+kconfig                 None                    None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+kdl                     None                    None                    ✘ kdlfmt                ✓                       ✓                       ✓                       ✓                       ✓                       
+klog                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+koka                    ✘ koka                  None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+kotlin                  ✘ kotlin-language-se…   None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+koto                    ✘ koto-ls               None                    ✘ koto                  ✓                       ✓                       ✓                       ✘                       ✓                       
+latex                   ✘ texlab                None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+ld                      None                    None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+ldif                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+lean                    ✘ lean                  None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+ledger                  None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+less                    ✓ vscode-css-languag…   None                    None                    ✓                       ✘                       ✓                       ✘                       ✓                       
+llvm                    None                    None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+llvm-mir                None                    None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+log                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+lpf                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+lua                     ✘ lua-language-serve…   None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+lua-format-string       None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+luap                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+luau                    ✘ luau                  None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+mail                    None                    None                    None                    ✓                       ✓                       ✘                       ✘                       ✓                       
+make                    None                    None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+markdoc                 ✘ markdoc-ls            None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+markdown                ✘ marksman              None                    None                    ✓                       ✘                       ✘                       ✓                       ✘                       
+                        ✘ markdown-oxide        
+                        ✘ rumdl                 
+matlab                  None                    None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+mermaid                 None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+meson                   ✘ mesonlsp              None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+mojo                    ✘ mojo-lsp-server       None                    ✘ pixi                  ✓                       ✓                       ✓                       ✘                       ✘                       
+move                    None                    None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+nasm                    ✘ asm-lsp               None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+nearley                 None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✓                       
+nginx                   None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+nickel                  ✘ nls                   None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+nim                     ✘ nimlangserver         None                    None                    ✓                       ✓                       ✓                       ✘                       ✓                       
+nix                     ✘ nil                   None                    ✘ nixfmt                ✓                       ✓                       ✓                       ✓                       ✓                       
+                        ✘ nixd                  
+nu                      ✘ nu-lsp                None                    ✘ nufmt                 ✓                       ✓                       ✓                       ✘                       ✘                       
+                        ✘ nu-lint               
+ocaml                   ✘ ocamllsp              None                    None                    ✓                       ✓                       ✓                       ✘                       ✓                       
+ocaml-interface         ✘ ocamllsp              None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+odin                    ✘ ols                   ✘ lldb-dap              ✘ odinfmt               ✓                       ✓                       ✓                       ✘                       ✘                       
+ohm                     None                    None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+opencl                  ✘ clangd                None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+openscad                ✘ openscad-lsp          None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+org                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+pascal                  ✘ pasls                 None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+passwd                  None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+pem                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+penrose                 None                    None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+perl                    ✘ perlnavigator         None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+pest                    ✘ pest-language-serv…   None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+php                     ✘ intelephense          None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+php-only                None                    None                    None                    ✓                       ✘                       ✘                       ✓                       ✘                       
+picat                   None                    None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+pkl                     ✘ pkl-lsp               None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+po                      None                    None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+pod                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+ponylang                ✘ pony-lsp              None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+powershell              None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✓                       
+prisma                  ✘ prisma-language-se…   None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+prolog                  ✘ swipl                 None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+properties              None                    None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+proverif                None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+prql                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+ptx                     None                    None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+pug                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+purescript              ✘ purescript-languag…   None                    ✘ purs-tidy             ✓                       ✓                       ✘                       ✘                       ✘                       
+python                  ✘ ty                    None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+                        ✘ ruff                  
+                        ✘ jedi                  
+                        ✘ pylsp                 
+                        ✘ zuban                 
+quint                   ✘ quint-language-ser…   None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+r                       ✘ r                     None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+regex                   None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✓                       
+rego                    ✘ regols                None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+rescript                ✘ rescript-language-…   None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+ripple                  ✘ ripple-lsp            None                    None                    ✓                       ✘                       ✘                       ✓                       ✓                       
+robot                   ✘ robotcode             None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+                        ✘ robotframework_ls     
+ron                     ✘ ron-lsp               None                    None                    ✓                       ✘                       ✓                       ✓                       ✓                       
+rpmspec                 None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+rshtml                  ✘ rshtml-analyzer       None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+                        ✓ vscode-html-langua…   
+                        ✘ superhtml             
+rst                     None                    None                    None                    ✓                       ✘                       ✘                       ✓                       ✘                       
+ruby                    ✘ ruby-lsp              None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+                        ✘ solargraph            
+rust                    ✓ rust-analyzer         ✘ lldb-dap              None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+rust-format-args        None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+scala                   ✘ metals                None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+scfg                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+scheme                  None                    None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+scss                    ✓ vscode-css-languag…   None                    None                    ✓                       ✘                       ✓                       ✘                       ✓                       
+shellcheckrc            None                    None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+slang                   ✘ slangd                None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+slint                   ✘ slint-lsp             None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+slisp                   None                    None                    None                    ✓                       ✘                       ✘                       ✓                       ✘                       
+smali                   ✘ smalisp               None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+smithy                  ✘ cs                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+sml                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+snakemake               ✘ pylsp                 None                    ✘ snakefmt              ✓                       ✘                       ✓                       ✘                       ✘                       
+solidity                ✘ solc                  None                    None                    ✓                       ✓                       ✘                       ✘                       ✓                       
+sourcepawn              ✘ sourcepawn-studio     None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+spade                   ✘ spade-language-ser…   None                    None                    ✓                       ✘                       ✓                       ✘                       ✓                       
+spicedb                 None                    None                    None                    ✓                       ✘                       ✘                       ✓                       ✘                       
+sql                     None                    None                    None                    ✓                       ✓                       ✘                       ✘                       ✓                       
+ssh_client_config       None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+strace                  None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+strictdoc               None                    None                    None                    ✓                       ✘                       ✘                       ✓                       ✘                       
+styx                    ✘ styx                  None                    None                    ✓                       ✓                       ✓                       ✘                       ✓                       
+supercollider           None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+svelte                  ✘ svelteserver          None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+sway                    ✘ forc                  None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+swift                   ✘ sourcekit-lsp         None                    ✘ swift-format          ✓                       ✓                       ✓                       ✓                       ✓                       
+systemverilog           ✘ svlangserver          None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+                        ✘ verible-verilog-ls…   
+t32                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+tablegen                None                    None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+tact                    None                    None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+task                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+tcl                     None                    None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+teal                    ✘ teal-language-serv…   None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+templ                   ✘ templ                 None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+tera                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+textproto               None                    None                    ✘ txtpbfmt              ✓                       ✓                       ✓                       ✘                       ✘                       
+thrift                  None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+tlaplus                 None                    None                    ✘ tlafmt                ✓                       ✘                       ✘                       ✘                       ✘                       
+todotxt                 None                    None                    ✓ sort                  ✓                       ✘                       ✘                       ✘                       ✘                       
+tolk                    None                    None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+toml                    ✘ taplo                 None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+                        ✘ tombi                 
+tql                     None                    None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+tsx                     ✘ typescript-languag…   None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+twig                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+typescript              ✘ typescript-languag…   None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+typespec                ✘ typespec              None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+typst                   ✓ tinymist              None                    None                    ✓                       ✓                       ✘                       ✓                       ✘                       
+                        ✓ harper-ls             
+ungrammar               None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+unison                  None                    None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+uxntal                  None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+v                       ✘ vlang-language-ser…   None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+vala                    ✘ vala-language-serv…   None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+vento                   None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+verilog                 ✘ verible-verilog-ls…   None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+vhdl                    ✘ vhdl_ls               None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+vhs                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+vim                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✓                       
+vue                     ✘ vuels                 None                    None                    ✓                       ✓                       ✓                       ✘                       ✘                       
+wast                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+wat                     ✘ wasm-language-tool…   None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+werk                    None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+wesl                    None                    None                    None                    ✓                       ✓                       ✘                       ✘                       ✘                       
+wgsl                    ✘ wgsl-analyzer         None                    None                    ✓                       ✓                       ✓                       ✓                       ✓                       
+wikitext                ✘ wikitext-lsp          None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+wit                     None                    None                    None                    ✓                       ✘                       ✓                       ✘                       ✘                       
+xit                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+xml                     None                    None                    None                    ✓                       ✓                       ✓                       ✘                       ✓                       
+xtc                     None                    None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+yaml                    ✘ yaml-language-serv…   None                    ✘ yamlfmt               ✓                       ✓                       ✓                       ✘                       ✓                       
+                        ✘ ansible-language-s…   
+yara                    ✘ yls                   None                    None                    ✓                       ✘                       ✘                       ✘                       ✘                       
+yuck                    None                    None                    None                    ✓                       ✘                       ✓                       ✘                       ✓                       
+zig                     ✘ zls                   ✘ lldb-dap              ✘ zig                   ✓                       ✓                       ✓                       ✓                       ✓                       
+
+This list is filtered according to the 'use-grammars' option in languages.toml file.
+To see the full list, use the '--health all' or '--health all-languages' option.
