@@ -1,108 +1,129 @@
 # pixelizer · webui
 
-A browser front-end for the `pixelizer-core` pixel-art image-processing pipeline. Built in Rust and compiled to WebAssembly with [Leptos](https://leptos.dev/) (client-side rendering) and bundled by [Trunk](https://trunkrs.dev/). The UI lets you assemble an ordered pipeline of operations, load an image, run the pipeline, and view the result — all client-side, with no server and no JavaScript application code.
+A browser front-end for the `pixelizer-core` pixel-art pipeline. Rust compiled to WebAssembly via [Leptos](https://leptos.dev/) (CSR), bundled by [Trunk](https://trunkrs.dev/). Assemble an ordered pipeline of operations, load an image, run it, view the result — entirely client-side, no server, no application JavaScript.
 
-This crate is the `webui` member of the `pixelizer` Cargo workspace, alongside `core` (the processing library) and `cli`.
+The `webui` member of the `pixelizer` workspace, alongside `core` (the pipeline library) and `cli`.
 
-For planned features and work in progress, see [ROADMAP.md](ROADMAP.md).
+Planned work: [ROADMAP.md](ROADMAP.md).
 
 ## Status
 
-The full data path works end to end: build a pipeline, upload an image, run it, see the output. The pipeline currently runs **synchronously on the main thread**, so the UI freezes for the duration of a run — noticeable on large images or expensive operation orders (e.g. posterize before downsample). Removing that freeze (via a web worker) is the main near-term task; see the ROADMAP.
+Full path works: build a pipeline, upload an image, run, see output. The pipeline runs **synchronously on the main thread**, so the UI freezes for the length of a run — noticeable on large images or expensive orderings (posterize before downsample). Removing that freeze via a web worker is the headline remaining task (ROADMAP).
 
 ## Running locally
 
-From the `webui/` directory:
+From `webui/`:
 
 ```
-trunk serve
+trunk serve                       # http://localhost:8080
+trunk serve --address 0.0.0.0     # reachable from other LAN devices
 ```
 
-Then open `http://localhost:8080`.
-
-To view from another device on the same LAN (a phone, another laptop), bind to all interfaces and visit your machine's LAN IP:
-
-```
-trunk serve --address 0.0.0.0
-```
-
-Find your LAN IP with `ip addr show | grep "inet "` (look for a `192.168.x.x` or `10.x.x.x` address) and browse to `http://<that-ip>:8080`. Note the layout is currently desktop-oriented and not yet adapted for small screens.
+For LAN access, find your IP with `ip addr show | grep "inet "` (a `192.168.x.x` / `10.x.x.x`) and browse to `http://<ip>:8080`. Layout is desktop-oriented; small screens are a known gap.
 
 ## Building for release
 
-Trunk follows the same dev/release split as `cargo build`. The default is the **dev** profile — unoptimized, which for WebAssembly means both slower execution and a noticeably larger `.wasm` download. For an image-processing app this difference is significant, so any meaningful performance testing (and anything shared over the LAN) should use a release build:
+Trunk mirrors `cargo`'s dev/release split, and the gap matters more here than usual: a dev `.wasm` is both slower to run and larger to download. **Measure and share only release builds** — dev numbers are meaningless for an image pipeline.
 
 ```
-trunk build --release      # produce an optimized bundle in dist/
-trunk serve --release      # serve an optimized build while developing
+trunk build --release
+trunk serve --release
 ```
 
-Without `--release` you are measuring an artificially slow binary; a release build of the pipeline can be several times faster.
+Two WASM-specific levers beyond the flag:
 
-There are two further size/speed levers beyond the flag, both WebAssembly-specific:
-
-**Rust release profile** — tune in the workspace root `Cargo.toml`:
+**Release profile** (workspace-root `Cargo.toml`):
 
 ```toml
 [profile.release]
-opt-level = "s"     # "s"/"z" optimize for size; "3" (default) favors speed
-lto = true          # link-time optimization — smaller and faster, near-free win
-codegen-units = 1   # slightly better optimization, slower build
+opt-level = "s"     # "s"/"z" = size; "3" (default) = speed
+lto = true          # near-free size+speed win
+codegen-units = 1   # marginally better codegen, slower build
 ```
 
-For this app the compute is the bottleneck rather than the download, so `opt-level = "3"` may be the better choice — worth measuring both against a representative image. `lto = true` is worth enabling regardless.
+Compute is the bottleneck here, not download, so `opt-level = "3"` is likely better — measure both against a representative image. `lto = true` regardless.
 
-**`wasm-opt`** — a post-processing pass (from Binaryen) that optimizes the `.wasm` after `rustc` is done, often shrinking it further. Trunk can run it as part of the build; configure it in `Trunk.toml`. See the [Trunk documentation](https://trunkrs.dev/) for the current option names.
+**`wasm-opt`** (Binaryen) — post-`rustc` pass, shrinks the `.wasm` further; Trunk runs it, configured in `Trunk.toml`. See Trunk docs for current option names.
 
-## How it works
+## Architecture
 
-### State and data flow
+The central design decision — the one to re-load into your head first — is that **the live pipeline is stored as data, not as core's typed `Operation` enum.** Everything below follows from that.
 
-Shared state lives at the `App` root and flows down to children, so siblings never reach into one another:
+### Two representations, one boundary
 
-- `rows` — the ordered pipeline, held as a `signal(Vec<OpRow>)` split into read/write halves (`rows: ReadSignal`, `set_rows: WriteSignal`) and passed to `PipelineList`. Each `OpRow` is an `{ id, op: Operation }`; the `id` is a stable key for Leptos's keyed `<For/>` so reordering animates correctly.
-- `source: RwSignal<Option<Image>>` — the decoded source image (`pixelizer_core::Image`, an `RgbaImage`). Written by the Viewport's file input, read by the run handler.
-- `output_url: RwSignal<Option<String>>` — the processed result as a PNG `data:` URL. Written by the run handler, read by the Viewport's `<img>`.
+`core::Operation` is the typed form the pipeline needs at `apply` time. But using it as the *live UI state* forces a translation layer on every edit: a generic slider doesn't know a `Blur` has a `sigma: f32`, so editing it meant serializing the op, poking one field, and deserializing back (an earlier design did exactly this, via `serde_json`; it's gone).
 
-`PipelineList` owns the per-row mechanics: `next_id` (a `StoredValue` counter) allocates stable ids for new rows; `move_op` reorders by swapping; `remove_op` retains-by-id; and `edit_op` applies an incoming mutation closure to the matching row.
+Instead the live state is a **value bag**: an op-instance is a `tag` plus a `BTreeMap<String, ParamValue>` keyed by the same param keys the schema declares. A widget reads and writes `values[key]` directly — no closures, no serde. The typed `Operation` is reconstructed **once, at Run**, and that boundary is the only place the schema-vs-bag contract is checked.
 
-Editing an operation's settings goes through a single `on_edit` callback typed as `EditPayload = (usize, Box<dyn Fn(&mut Operation)>)`: a config card sends up the row id plus a closure that mutates the matching `Operation` in place. This keeps each card decoupled from how `rows` is stored.
+The two data sources:
 
-The palette list is loaded once at startup from `palettes.yaml` (compiled into the binary via `include_str!`). `Palettes::load` parses it into a `HashMap<String, Vec<String>>`, then collects into a `Vec<(String, Vec<String>)>` sorted by name — so palettes always present in alphabetical order. The result is provided through Leptos context as a `StoredValue<Palettes>`, which the Palette Map config reads back with `use_context`.
+- **Schema** — `core::op_schema`, a `'static` descriptor table (`OP_VARIANTS`, `DITHER_VARIANTS`). Owns each param's key, label, kind, range, and default. The single source of truth for *what a param is*. Read by any config; never mutated.
+- **State** — `rows: signal(Vec<OpRow>)`. The user's current values. `OpRow` is `{ id, inst: OpInstance }`; `id` is the stable key for the keyed `<For/>` (UI-only, kept off `OpInstance` so the instance stays pure data).
+
+Key types (in `op_instance.rs`):
+
+- `OpInstance { tag: String, values: BTreeMap<String, ParamValue> }` — one op in the live pipeline.
+- `ParamValue` — `Num(f64)` (covers both Float and Int; the schema's `ParamKind` carries the int/float distinction and the boundary narrows to `u32`/`f32` per field), `Bool(bool)`, `Palette(Vec<String>)`, `Dither(Option<DitherChoice>)`.
+- `DitherChoice { tag, values }` — a nested tag+scalar-bag, structurally a mini-instance. Its own type (not reused `OpInstance`) so its bag is provably scalar-only — the recursion is exactly two deep, no deeper.
+
+Why `BTreeMap` not `HashMap`: deterministic iteration, so YAML output is stable.
+
+### Construction and the boundary
+
+- `default_instance(tag)` builds a fresh instance by reading defaults from `OP_VARIANTS`. Defaults live in the schema and nowhere else — this is why adding a scalar op is one table row.
+- `OpInstance::to_operation() -> Result<Operation, BuildError>` is the boundary. It reads each key out of the bag, narrows to the field's real type, and assembles the typed `Operation`. It returns `Result` because the bag is `String -> ParamValue` and so a missing/mistyped key is a *runtime* possibility (e.g. an imported YAML predating a schema change) — surfaced as a logged error at Run, not a panic. `DitherChoice::to_config()` does the same for the nested dither enum. Both are hand-written (no serde) so the whole boundary is uniform.
+
+### Edit flow
+
+A config card emits an edit upward via `on_edit: Callback<EditPayload>`, where `EditPayload = (usize, String, ParamValue)` — row id, param key, new value. `PipelineList::edit_op` drops it into that instance's bag with one `values.insert`. That's the entire write path; the serde bridge that used to live here is gone.
+
+Nested (dither) edits stay uniform by committing the *whole* `ParamValue::Dither(Some(choice))` under key `"dither"` — the dither child reads its current choice, mutates a copy, and sends it back as one value. No nested-path message type.
+
+### Config rendering
+
+`op_config_view(id, tag, ...)` dispatches by tag: the five scalar ops go through `generic_op_config`, which loops the variant's params and renders a widget per `ParamKind` (`FloatSlider`/`IntSlider`/`BoolWidget`). `palette_map` is the one hand-written config — its params (`palette`, `dither`) aren't scalars, so it composes its controls directly, reusing `BoolWidget` for the scalar `alpha` param. (`BoolWidget` is shared: the generic loop renders it via a `<BoolWidget/>` tag; palette_map renders it the same way. One checkbox implementation.)
+
+### Other state
+
+- `source: RwSignal<Option<Image>>` — decoded source (`RgbaImage`). Written by the Viewport's file input, read by the run handler.
+- `output_url: RwSignal<Option<String>>` — result as a PNG `data:` URL. Written by the run handler, read by the Viewport's `<img>`.
+- Palettes load once at startup from `palettes.yaml` (`include_str!`), parsed to a name-sorted `Vec<(String, Vec<String>)>`, provided via context as `StoredValue<Palettes>`, read by the palette-map config.
 
 ### The run path
 
-The **Run pipeline** button lives in `PipelineList`, but the run logic stays at the `App` root: `App` passes `PipelineList` an `on_run: Callback<()>` plus a `can_run: Signal<bool>` (derived from `source`, driving the button's disabled state). The button is a trigger; `App` owns everything the run touches, so `PipelineList` never sees the decoded image or the output URL. When the button is clicked:
+The **Run** button renders in `PipelineList` but the logic lives at `App` root: `App` passes `on_run: Callback<()>` and `can_run: Signal<bool>` (derived from `source`, drives the disabled state). So the child triggers without ever holding `source`/`output_url`. On click:
 
-1. The source `RgbaImage` is read from the `source` signal (the button is disabled while `source` is `None`, via `can_run`).
-2. The `rows` are collected into a `Pipeline { operations }`.
-3. `pixelizer_core::apply(&pipeline, image)` runs the operations in order, each consuming the previous image by value and returning a new one.
-4. The result is PNG-encoded, base64'd into a `data:` URL, and stored in `output_url`. Errors are logged rather than surfaced in the UI.
-5. The Viewport's `<img>` reactively displays it.
+1. Read the source `RgbaImage` (button disabled while `None`).
+2. Map each row's `inst.to_operation()` into a `Vec<Operation>`, short-circuiting on the first `BuildError` (logged, run aborts).
+3. `pixelizer_core::apply(&pipeline, image)` runs the ops in order, each consuming the previous image by value.
+4. PNG-encode → base64 `data:` URL → `output_url`. Errors logged, not surfaced in UI.
+5. Viewport's `<img>` reactively displays it.
 
-Image decoding (`load_from_memory` → `to_rgba8`) and encoding (PNG → base64 data URL) are kept as plain functions free of any Leptos or DOM types. This isolation is deliberate: it's what will let the heavy work move into a web worker later with minimal disruption to the UI code.
+`decode` / `encode_to_data_url` (in `viewport.rs`) are plain functions free of Leptos/DOM types — deliberate, so the heavy work can move into a web worker later without dragging UI code along.
 
-### Pipeline YAML preview
+### YAML preview
 
-Below the run button, a toggle reveals a live YAML serialization of the current pipeline, with a copy-to-clipboard button. It's produced by `serde_yaml::to_string` on the same `Pipeline` the run path builds, so the output is exactly what the `cli` crate parses — copy it, save it as a `.yaml`, and it runs unmodified through the CLI. The serialization is lazy: it only runs while the preview is shown (and re-runs reactively as the pipeline changes), so it costs nothing when hidden.
+A toggle below Run reveals a live YAML serialization of the current pipeline (via `to_operation()` on each row, then `serde_yaml::to_string`), with copy-to-clipboard. Output is exactly what `cli` parses — copy, save as `.yaml`, runs unmodified through the CLI. Lazy: only serializes while shown, re-runs reactively.
 
 ## Dependencies of note
 
 - `leptos` (csr) — reactive UI.
-- `leptos-use` — `use_element_size` drives the op card's collapse animation by measuring content height.
-- `gloo-file` — async reading of the uploaded file's bytes.
-- `pixelizer-core` (workspace path dep) — the pipeline library; also re-exports `image`, so decode/encode stay on the same `image` version as core.
-- `base64` — encoding the result for the `data:` URL.
-- `serde_json` — the read/write-by-key bridge in the generic config card (serialize an `Operation`, edit one field, deserialize back).
-- `serde_yaml` — serializing the pipeline for the YAML preview; same crate and version the `cli` crate parses with, so output round-trips.
-- `yaml_serde` — parsing `palettes.yaml`.
-- `gloo-timers` — the brief revert delay on the YAML "Copied!" feedback.
-- `wasm-bindgen-futures` — `spawn_local` for the async file read and the clipboard write.
-- `web-sys` — DOM types for the file input and the clipboard API (`Navigator`, `Clipboard` features).
-- `console_error_panic_hook` — readable panics in the browser console.
+- `leptos-use` — `use_element_size` drives the op card's collapse animation.
+- `gloo-file` — async read of uploaded bytes.
+- `pixelizer-core` (workspace path) — the pipeline; re-exports `image`, keeping decode/encode on core's `image` version.
+- `base64` — the result `data:` URL.
+- `serde_yaml` — YAML preview; same crate+version `cli` parses with, so it round-trips. (Deprecated upstream — see ROADMAP for the consolidation plan.)
+- `yaml_serde` — parsing `palettes.yaml`. (The second YAML crate the ROADMAP wants to eliminate.)
+- `gloo-timers` — the "Copied!" revert delay.
+- `wasm-bindgen-futures` — `spawn_local` for the file read and clipboard write.
+- `web-sys` — DOM types for the file input and clipboard.
+- `console_error_panic_hook` — readable panics in the console.
+
+No `serde_json` — the edit path that needed it is gone.
 
 ## Design notes
 
-- **Rust/WASM as the primary medium**, with JavaScript treated as a thin interop edge only. No application logic lives in JS.
-- **Owned-value pipeline**: each operation takes the image by value and returns a new one. This matches what the operations physically do (each allocates a new image, often of different dimensions) and means no in-place mutation or cloning inside `apply` — the image is *moved* through the chain.
-- **State lifted to the root** so the run trigger, the pipeline, and the viewport coordinate only through parent-held signals. The run button illustrates this: it renders in `PipelineList` but fires an `on_run` callback owned by `App`, so the child triggers the action without holding the `source`/`output_url` state the action reads and writes.
+- **Rust/WASM primary, JS as a thin interop edge.** No application logic in JS.
+- **Value-bag state, typed only at the boundary.** The trade: the edit path gives up compile-time field guarantees (the bag is `String -> ParamValue`) in exchange for deleting the entire serde translation layer. The guarantees come back at `to_operation()`, which is *about* to validate anyway. This is the load-bearing decision; see Architecture.
+- **Owned-value pipeline.** Each op takes the image by value and returns a new one — matches what they physically do (each allocates, often at new dimensions), so the image is *moved* through the chain, no in-place mutation or cloning in `apply`.
+- **State lifted to root.** Run trigger, pipeline, and viewport coordinate only through parent-held signals; children never reach into each other.
