@@ -8,15 +8,37 @@ The biggest item — moving the pipeline off the main thread — sits at the bot
 
 ## In progress
 
-### Palette Map card — swatch UI
+### Palette Map card — palette editor
 
-The dithering config and the `preserve alpha` toggle are **done**; what remains on this card is the palette editor itself. Today it's a `<select>` of baked-in named palettes. `palette_map_config` already derives the current palette's colors into a `_colors` signal (underscore-prefixed, presently unused) — the intended source for swatches. Remaining, in dependency order:
+The dithering config and the `preserve alpha` toggle are **done**; what remains is the palette editor. Today it's a native `<select>` of baked-in named palettes.
 
-- **Color swatches** — render the current palette as a row of colored squares (driven by `_colors`), instead of or alongside the dropdown.
-- **Add-swatch affordance** — an empty `+` swatch to add a color.
-- **Custom color picker** — clicking a swatch (or `+`) opens a picker. The native browser picker is inadequate, so this is a from-scratch component.
+**The keystone: replace the `<select>` with a custom picker component.** This is a committed decision, not a maybe. A native `<option>` renders text only — no per-row swatches, no arbitrary entries, no "Custom" state, no embedded drop zone. Every interesting item below wants at least one of those, so the native select is a hard ceiling. The custom picker (a trigger button + a self-rendered panel of rows; owns its open/close, keyboard nav, click-outside) is the foundation the rest stands on. Build it **second** — after the trivial grid, before everything else.
 
-This is the last real UI build-out on the card. Note the wiring pattern it must follow: a color edit commits `ParamValue::Palette(colors)` under key `"palette"` (see the existing `on_change` handler), same as everything else — the swatch UI changes how colors are *chosen*, not how they're *stored*.
+Dependency order (this is the real ordering, not a wishlist):
+
+1. **Swatch grid under the picker** — pure read, no new plumbing. `palette_map_config` already derives the current palette into a `_colors` signal (underscore-prefixed, currently unused); drop the underscore and map it to colored squares. A few lines, touches nothing else. Ship it standalone first — it proves the read path and is independently useful. *Does not require the custom picker.*
+
+2. **Custom picker** (the keystone above) — everything from here down depends on it.
+
+3. **In-list swatches** — each picker row shows the palette name plus a mini swatch strip, so all options are visible without click-testing each. This is *why* the native select had to go; it's the first payoff of the picker.
+
+4. **File upload → new named entry.** Two separable problems, different difficulty:
+   - *Intake:* start with `<input type="file">` (~10 lines, reuses the async-read pattern in `viewport.rs` — `gloo_file` + `read_as_bytes`). A drop zone is nicer but adds drag-event handling and visual states; do it second, once parsing works. The picker can host the drop zone once it exists (another reason it's the keystone).
+   - *Parsing:* format difficulty varies wildly (see the format list below). An uploaded file's name becomes a new entry in the picker.
+
+5. **Add/remove colors** — a `+` swatch to add; an `×` on hover to delete. Any add/remove mutates `_colors` and flips the picker to a **"Custom"** entry (which only the custom picker can display — item 2 again).
+
+**Wiring invariant for all of the above:** a color change commits `ParamValue::Palette(colors)` under key `"palette"` (see the existing `on_change` handler). The editor changes how colors are *chosen*; it never changes how they're *stored*. Swatches, uploads, and edits all funnel to that one commit.
+
+**Palette file formats** (from lospec's export options), easiest-first — implement the cheap text ones, skip the binary one:
+
+- **HEX** — one hex code per line. Trivial; maps straight onto the existing `Vec<String>` of `#rrggbb`. *Do first.*
+- **GIMP GPL** — text; `R G B Name` rows after a header line. Easy.
+- **JASC PAL** — text; a count line then `R G B` rows. Easy.
+- **Paint.NET TXT** — one `AARRGGBB` hex per line, `;` comments. Easy (strip the alpha).
+- **Adobe ASE** — binary, chunked, big-endian floats. Hard; **skip** unless there's a real reason.
+
+HEX + GPL covers the two most common lospec exports for almost no cost; the other two text formats are cheap add-ons. ASE isn't worth it.
 
 ---
 
