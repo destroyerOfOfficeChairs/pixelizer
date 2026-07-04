@@ -157,6 +157,11 @@ const PALETTE_MAP_PARAMS: &[ParamDescriptor] = &[
         },
     },
     ParamDescriptor {
+        key: "alpha",
+        label: "preserve alpha",
+        kind: ParamKind::Bool { default: true },
+    },
+    ParamDescriptor {
         key: "dither",
         label: "dither",
         kind: ParamKind::Dither {

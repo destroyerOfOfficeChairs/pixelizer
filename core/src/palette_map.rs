@@ -91,10 +91,11 @@ pub fn palette_map(
     image: Image,
     colors: &[String],
     dither: Option<DitherConfig>,
+    preserve_alpha: bool,
 ) -> Result<Image, crate::PixelizerError> {
     let foo: PaletteData = prepare_palette(colors)?;
     match dither {
-        None => palette_map_flat(image, foo.rgb, foo.lab),
+        None => palette_map_flat(image, foo.rgb, foo.lab, preserve_alpha),
         Some(DitherConfig::FloydSteinberg { bleed, clamp }) => palette_map_diffuse(
             image,
             FLOYD_STEINBERG,
@@ -138,6 +139,7 @@ pub fn palette_map_flat(
     image: Image,
     rgb: Vec<[u8; 3]>,
     lab: Vec<Oklab>,
+    preserve_alpha: bool,
 ) -> Result<Image, crate::PixelizerError> {
     let (w, h) = image.dimensions();
     let mut out = Image::new(w, h);
@@ -145,7 +147,10 @@ pub fn palette_map_flat(
     let mut cache: HashMap<[u8; 3], usize> = HashMap::new();
 
     for (x, y, pixel) in image.enumerate_pixels() {
-        let [r, g, b, a] = pixel.0;
+        let [r, g, b, mut a] = pixel.0;
+        if !preserve_alpha {
+            a = 255;
+        }
         let idx = *cache
             .entry([r, g, b])
             .or_insert_with(|| nearest_oklab(&lab, rgb_to_oklab(r, g, b)));

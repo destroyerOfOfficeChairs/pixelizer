@@ -77,6 +77,8 @@ pub enum Operation {
         colors: Vec<String>,
         #[serde(default)]
         dither: Option<DitherConfig>,
+        #[serde(default = "preserve_alpha_default")]
+        preserve_alpha: bool,
     },
     Upscale {
         factor: u32,
@@ -95,6 +97,10 @@ pub enum Operation {
     },
 }
 
+fn preserve_alpha_default() -> bool {
+    true
+}
+
 fn default_low_percentile() -> f32 {
     0.01
 }
@@ -106,9 +112,11 @@ pub fn apply(pipeline: &Pipeline, mut image: Image) -> Result<Image, PixelizerEr
     for op in &pipeline.operations {
         match op {
             Operation::Downsample { pixel_size } => image = downsample(*pixel_size, image),
-            Operation::PaletteMap { colors, dither } => {
-                image = palette_map(image, colors, *dither)?
-            }
+            Operation::PaletteMap {
+                colors,
+                dither,
+                preserve_alpha,
+            } => image = palette_map(image, colors, *dither, *preserve_alpha)?,
             Operation::Upscale { factor } => image = upscale(image, *factor),
             Operation::Posterize { levels } => image = posterize(image, *levels)?,
             Operation::Blur { sigma } => image = blur(image, *sigma),

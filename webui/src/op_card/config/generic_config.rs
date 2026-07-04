@@ -74,32 +74,18 @@ fn param_widget(
         }
 
         // -------- Bool --------
-        ParamKind::Bool { default } => {
-            let value = Signal::derive(move || {
-                rows.with(|rs| {
-                    rs.iter()
-                        .find(|r| r.id == id)
-                        .and_then(|r| r.inst.values.get(key))
-                        .and_then(ParamValue::as_bool)
-                })
-                .unwrap_or(default)
-            });
-            let on_commit = Callback::new(move |checked: bool| {
-                on_edit.run((id, key.to_string(), ParamValue::Bool(checked)));
-            });
-
-            view! {
-                <label class="flex items-center gap-2 text-xs text-slate-400 p-3">
-                    <input
-                        type="checkbox"
-                        prop:checked=move || value.get()
-                        on:change=move |ev| on_commit.run(event_target_checked(&ev))
-                    />
-                    {p.label}
-                </label>
-            }
-            .into_any()
+        // ParamKind::Bool { default } => bool_widget(id, rows, on_edit, default, key, p.label),
+        ParamKind::Bool { default } => view! {
+            <BoolWidget
+                id=id
+                rows=rows
+                on_edit=on_edit
+                default=default
+                key=key
+                label=p.label
+            />
         }
+        .into_any(),
 
         // Palette / Dither are not generic scalar params; palette_map has its
         // own config. If one appears here it's a routing bug, so surface it.
@@ -110,6 +96,49 @@ fn param_widget(
         }
         .into_any(),
     }
+}
+
+// pub fn bool_widget(
+//     id: usize,
+//     rows: ReadSignal<Vec<OpRow>>,
+//     on_edit: Callback<EditPayload>,
+//     default: bool,
+//     key: &'static str,
+//     label: &'static str,
+// ) -> AnyView {
+#[component]
+pub fn BoolWidget(
+    id: usize,
+    rows: ReadSignal<Vec<OpRow>>,
+    on_edit: Callback<EditPayload>,
+    default: bool,
+    key: &'static str,
+    label: &'static str,
+) -> impl IntoView {
+    let value = Signal::derive(move || {
+        rows.with(|rs| {
+            rs.iter()
+                .find(|r| r.id == id)
+                .and_then(|r| r.inst.values.get(key))
+                .and_then(ParamValue::as_bool)
+        })
+        .unwrap_or(default)
+    });
+    let on_commit = Callback::new(move |checked: bool| {
+        on_edit.run((id, key.to_string(), ParamValue::Bool(checked)));
+    });
+
+    view! {
+        <label class="flex items-center gap-2 text-xs text-slate-400 p-3">
+            <input
+                type="checkbox"
+                prop:checked=move || value.get()
+                on:change=move |ev| on_commit.run(event_target_checked(&ev))
+            />
+            {label}
+        </label>
+    }
+    .into_any()
 }
 
 /// Render every descriptor param for this op's tag, reading/writing the bag.

@@ -1,4 +1,5 @@
 use super::dither::DitherConfig;
+use super::generic_config::BoolWidget;
 use crate::op_instance::ParamValue;
 use crate::{EditPayload, OpRow, Palettes};
 use leptos::prelude::*;
@@ -58,10 +59,14 @@ pub fn palette_map_config(
                            text-slate-200 p-2 w-full"
                     on:change=on_change
                 >
-                    <option value="">"— pick a palette —"</option>
+                    // <option value="">"— pick a palette —"</option>
+                    //
+                    // "Black and White" option auto-magically appears ¯\_(ツ)_/¯
                     {options}
                 </select>
             </div>
+            // TODO: Remove hardcoded "default=true", "key=alpha", and "label=preserve alpha" in favor of reading from the op_schema
+            <BoolWidget id=id rows=rows on_edit=on_edit default=true key="alpha" label="preserve alpha"/>
 
             <DitherConfig id=id rows=rows on_edit=on_edit/>
         </div>
