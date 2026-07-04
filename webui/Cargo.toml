@@ -11,7 +11,6 @@ gloo-timers = { version = "0.4.0", features = ["futures"] }
 leptos = { version = "0.8.19", features = ["csr"] }
 leptos-use = { version = "0.19.0", features = ["use_element_size"] }
 pixelizer-core = { version = "0.1.0", path = "../core" }
-serde_json = "1.0.150"
 serde_yaml = "0.9.34"
 wasm-bindgen-futures = "0.4.76"
 web-sys = "0.3.103"
