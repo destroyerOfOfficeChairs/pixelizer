@@ -1,22 +1,27 @@
 mod op_card;
+mod op_instance;
 mod pipeline_list;
 mod viewport;
 
 use leptos::prelude::*;
 use pipeline_list::PipelineList;
-use pixelizer_core::Operation;
 use viewport::Viewport;
 
 use pixelizer_core::Pipeline;
 
+use crate::op_instance::{OpInstance, ParamValue, default_instance};
 use crate::viewport::encode_to_data_url;
 
-pub type EditPayload = (usize, Box<dyn Fn(&mut Operation)>);
+/// An edit emitted upward by a Config: set `key` on op `id` to `value`.
+/// Data, not a closure — the whole serde-bridge apparatus is gone. Nested
+/// edits (dither params) are expressed as a single `ParamValue::Dither(_)`
+/// write under key "dither", so this stays uniformly (id, key, value).
+pub type EditPayload = (usize, String, ParamValue);
 
 #[derive(Clone)]
 pub struct OpRow {
-    id: usize,
-    op: Operation,
+    pub id: usize,
+    pub inst: OpInstance,
 }
 
 pub struct Palettes {
@@ -38,15 +43,32 @@ impl Palettes {
 fn App() -> impl IntoView {
     let (rows, set_rows) = signal(vec![OpRow {
         id: 0,
-        op: Operation::Downsample { pixel_size: 8 },
+        // Safe: "downsample" is a known schema tag.
+        inst: default_instance("downsample").expect("downsample is a known op"),
     }]);
     let source = RwSignal::new(None::<pixelizer_core::Image>);
     let output_url = RwSignal::new(None::<String>);
 
     // Run logic stays here — it owns source/output_url. Exposed as a callback.
+    // The boundary conversion (OpInstance -> Operation) happens here, once per
+    // run, and is the only place a malformed bag can surface — as a logged
+    // error, not a panic.
     let on_run = Callback::new(move |_: ()| {
         let Some(img) = source.get() else { return };
-        let ops: Vec<Operation> = rows.get().into_iter().map(|r| r.op).collect();
+
+        let ops: Result<Vec<_>, _> = rows
+            .get()
+            .into_iter()
+            .map(|r| r.inst.to_operation())
+            .collect();
+        let ops = match ops {
+            Ok(ops) => ops,
+            Err(e) => {
+                leptos::logging::error!("couldn't build pipeline: {e}");
+                return;
+            }
+        };
+
         let pipeline = Pipeline { operations: ops };
         // synchronous — UI freezes here for a few seconds. Known.
         match pixelizer_core::apply(&pipeline, img) {

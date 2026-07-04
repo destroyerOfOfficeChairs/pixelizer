@@ -31,7 +31,14 @@ pub enum ParamKind {
     Int { default: i64, min: i64, max: i64 },
     /// A bool, rendered as a checkbox/toggle.
     Bool { default: bool },
+    /// A fixed palette of colors (the palette-map param). `colors` is the
+    /// default starting palette; the UI swaps it via the palette picker.
+    Palette { colors: [&'static str; 2] },
+    /// The palette-map dither param. ...
+    Dither { default_tag: &'static str },
 }
+
+const DEFAULT_PALETTE: [&str; 2] = ["#000000", "#ffffff"];
 
 /// One selectable variant (e.g. one dither algorithm), with its parameters.
 #[derive(Clone, Debug)]
@@ -47,12 +54,6 @@ pub struct VariantDescriptor {
 // ----------------------------------------------------------------------------
 // 2. THE DITHER DESCRIPTOR TABLE  —  core (next to DitherConfig)
 // ----------------------------------------------------------------------------
-// This is the single source of truth for the UI. Note it sits right next to
-// the enum, so when you add a variant the table is staring at you.
-//
-// The three diffusion variants share the same two params, so we name that
-// shared slice once and reuse it — adding a fourth diffusion kernel is then
-// a one-line table row.
 
 const DIFFUSE_PARAMS: &[ParamDescriptor] = &[
     ParamDescriptor {
@@ -147,6 +148,23 @@ const POSTERIZE_PARAMS: &[ParamDescriptor] = &[ParamDescriptor {
     },
 }];
 
+const PALETTE_MAP_PARAMS: &[ParamDescriptor] = &[
+    ParamDescriptor {
+        key: "palette",
+        label: "palette",
+        kind: ParamKind::Palette {
+            colors: DEFAULT_PALETTE,
+        },
+    },
+    ParamDescriptor {
+        key: "dither",
+        label: "dither",
+        kind: ParamKind::Dither {
+            default_tag: "bayer8",
+        },
+    },
+];
+
 /// Every dither variant the UI should offer. The `None` (no dithering) case
 /// is handled by the UI separately — this table is the `Some(_)` options.
 pub const DITHER_VARIANTS: &[VariantDescriptor] = &[
@@ -203,6 +221,11 @@ pub const OP_VARIANTS: &[VariantDescriptor] = &[
         label: "posterize",
         params: POSTERIZE_PARAMS,
     },
+    VariantDescriptor {
+        tag: "palette_map",
+        label: "palette map",
+        params: PALETTE_MAP_PARAMS,
+    },
 ];
 
 // A small accessor so the webui doesn't index the slice directly.
@@ -212,4 +235,48 @@ pub fn dither_variants() -> &'static [VariantDescriptor] {
 
 pub fn op_variants() -> &'static [VariantDescriptor] {
     OP_VARIANTS
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every `ParamKind::Dither { default_tag }` must name a real variant in
+    /// DITHER_VARIANTS. This is the one string that could silently drift from
+    /// the table now that the nested-enum taxonomy is gone; the test ties it
+    /// back so a typo fails `cargo test` instead of failing at runtime.
+    #[test]
+    fn dither_default_tags_exist() {
+        let known = |tag: &str| DITHER_VARIANTS.iter().any(|v| v.tag == tag);
+        for variant in OP_VARIANTS {
+            for p in variant.params {
+                if let ParamKind::Dither { default_tag } = p.kind {
+                    assert!(
+                        known(default_tag),
+                        "op '{}' param '{}' has default_tag '{}' \
+                         with no matching DITHER_VARIANTS entry",
+                        variant.tag,
+                        p.key,
+                        default_tag,
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// The UI label for an op named by its tag. Falls back to the tag itself if
+/// it isn't in OP_VARIANTS (shouldn't happen for a live instance).
+pub fn label_for_tag(tag: &str) -> &'static str {
+    OP_VARIANTS
+        .iter()
+        .find(|v| v.tag == tag)
+        .map(|v| v.label)
+        .unwrap_or("unknown")
+}
+
+/// Every op the "add operation" menu should offer, as (tag, label) pairs.
+/// Straight from the table — no separate list to maintain.
+pub fn all_op_menu() -> Vec<(&'static str, &'static str)> {
+    OP_VARIANTS.iter().map(|v| (v.tag, v.label)).collect()
 }

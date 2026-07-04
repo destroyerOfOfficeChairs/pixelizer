@@ -1,29 +1,33 @@
 use super::dither::DitherConfig;
+use crate::op_instance::ParamValue;
 use crate::{EditPayload, OpRow, Palettes};
 use leptos::prelude::*;
-use pixelizer_core::Operation;
+
+const PALETTE_KEY: &str = "palette";
 
 pub fn palette_map_config(
     id: usize,
     rows: ReadSignal<Vec<OpRow>>,
     on_edit: Callback<EditPayload>,
 ) -> AnyView {
-    // prefix with an underscore for now.
-    let _colors_to_map = Signal::derive(move || {
-        rows.get()
-            .iter()
-            .find(|r| r.id == id)
-            .and_then(|r| match &r.op {
-                Operation::PaletteMap { colors, dither: _ } => Some(colors.clone()),
-                _ => None,
-            })
-            .unwrap_or(vec!["#000000".to_owned(), "#ffffff".to_owned()])
+    // The current palette colors, read from the bag. (Swatch display is future
+    // work; kept live so it reflects the selected palette when built out.)
+    let _colors = Signal::derive(move || {
+        rows.with(|rs| {
+            rs.iter()
+                .find(|r| r.id == id)
+                .and_then(|r| r.inst.values.get(PALETTE_KEY))
+                .and_then(|v| match v {
+                    ParamValue::Palette(c) => Some(c.clone()),
+                    _ => None,
+                })
+        })
+        .unwrap_or_else(|| vec!["#000000".to_owned(), "#ffffff".to_owned()])
     });
 
     let preloaded_palettes =
         use_context::<StoredValue<Palettes>>().expect("You forgot to provide palettes.");
 
-    // Build the <option> list by reading through the handle.
     let options = preloaded_palettes.with_value(|p| {
         p.palettes
             .iter()
@@ -35,7 +39,6 @@ pub fn palette_map_config(
 
     let on_change = move |ev| {
         let chosen = event_target_value(&ev);
-        // Look up the chosen palette's colors, then push an edit.
         let colors = preloaded_palettes.with_value(|p| {
             p.palettes
                 .iter()
@@ -43,14 +46,7 @@ pub fn palette_map_config(
                 .map(|(_, colors)| colors.clone())
         });
         if let Some(colors) = colors {
-            on_edit.run((
-                id,
-                Box::new(move |op: &mut Operation| {
-                    if let Operation::PaletteMap { colors: c, .. } = op {
-                        *c = colors.clone();
-                    }
-                }),
-            ));
+            on_edit.run((id, PALETTE_KEY.to_string(), ParamValue::Palette(colors)));
         }
     };
 

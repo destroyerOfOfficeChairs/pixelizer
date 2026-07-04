@@ -1,65 +1,18 @@
 pub(super) mod sliders;
-use crate::op_card::config::{read_f64, read_i64, typed_value};
+use crate::op_instance::ParamValue;
 use crate::{EditPayload, OpRow};
 use leptos::prelude::*;
-use pixelizer_core::Operation;
-use pixelizer_core::ui_api::{ParamDescriptor, ParamKind, VariantDescriptor, op_variants};
-use serde_json::Value;
+use pixelizer_core::op_schema::{ParamDescriptor, ParamKind, op_variants};
 use sliders::{FloatSlider, IntSlider, decimals_for_step};
 
-/// Read one scalar field as f64 from the live Operation, by key.
-fn read_field(op: &Operation, key: &str) -> Option<f64> {
-    match serde_json::to_value(op) {
-        Ok(Value::Object(m)) => read_f64(&m, key),
-        _ => None,
-    }
-}
-
-/// Read one field as i64 (for Int params). Mirrors read_field but integral.
-fn read_field_i64(op: &Operation, key: &str) -> Option<i64> {
-    match serde_json::to_value(op) {
-        Ok(Value::Object(m)) => read_i64(&m, key),
-        _ => None,
-    }
-}
-
-/// Find the descriptor row for a given op tag (e.g. "blur").
-fn variant_for(tag: &str) -> Option<&'static VariantDescriptor> {
-    op_variants().iter().find(|v| v.tag == tag)
-}
-
-/// The serde tag string for an Operation instance, via its Serialize impl.
-/// (Operation has tag = "type", rename_all = "snake_case".)
-fn op_tag(op: &Operation) -> String {
-    match serde_json::to_value(op) {
-        Ok(Value::Object(m)) => m
-            .get("type")
-            .and_then(Value::as_str)
-            .map(str::to_string)
-            .unwrap_or_default(),
-        _ => String::new(),
-    }
-}
-
-/// Build an edit closure that sets ONE key on the op to `new_val`, going
-/// through serde so we don't hand-write a per-field match. The typing of the
-/// f64 into the field's real JSON type is delegated to the shared
-/// `typed_value`; only the *path* (top-level op object) is local here.
-fn set_field_closure(
-    key: &'static str,
-    kind: ParamKind,
-    new_val: f64,
-) -> Box<dyn Fn(&mut Operation)> {
-    Box::new(move |op: &mut Operation| {
-        let Ok(Value::Object(mut m)) = serde_json::to_value(&*op) else {
-            return;
-        };
-        m.insert(key.to_string(), typed_value(kind, new_val));
-        if let Ok(new_op) = serde_json::from_value::<Operation>(Value::Object(m)) {
-            *op = new_op;
-        }
-        // If from_value failed (shouldn't, for a valid single-field change),
-        // we leave op untouched rather than corrupt it.
+/// Read one param's current value from the live instance's bag, as f64.
+/// Returns None if the row or key is absent.
+fn read_num(rows: ReadSignal<Vec<OpRow>>, id: usize, key: &str) -> Option<f64> {
+    rows.with(|rs| {
+        rs.iter()
+            .find(|r| r.id == id)
+            .and_then(|r| r.inst.values.get(key))
+            .and_then(ParamValue::as_num)
     })
 }
 
@@ -80,17 +33,9 @@ fn param_widget(
             max,
             step,
         } => {
-            let value = Signal::derive(move || {
-                rows.with(|rs| {
-                    rs.iter()
-                        .find(|r| r.id == id)
-                        .and_then(|r| read_field(&r.op, key))
-                })
-                .unwrap_or(default as f64)
-            });
-
+            let value = Signal::derive(move || read_num(rows, id, key).unwrap_or(default as f64));
             let on_commit = Callback::new(move |raw: f64| {
-                on_edit.run((id, set_field_closure(key, kind, raw)));
+                on_edit.run((id, key.to_string(), ParamValue::Num(raw)));
             });
 
             view! {
@@ -108,16 +53,13 @@ fn param_widget(
         // -------- Int --------
         ParamKind::Int { default, min, max } => {
             let value = Signal::derive(move || {
-                rows.with(|rs| {
-                    rs.iter()
-                        .find(|r| r.id == id)
-                        .and_then(|r| read_field_i64(&r.op, key))
-                })
-                .unwrap_or(default)
+                read_num(rows, id, key)
+                    .map(|n| n.round() as i64)
+                    .unwrap_or(default)
             });
-
             let on_commit = Callback::new(move |raw: i64| {
-                on_edit.run((id, set_field_closure(key, kind, raw as f64)));
+                let clamped = raw.clamp(min, max);
+                on_edit.run((id, key.to_string(), ParamValue::Num(clamped as f64)));
             });
 
             view! {
@@ -137,42 +79,48 @@ fn param_widget(
                 rows.with(|rs| {
                     rs.iter()
                         .find(|r| r.id == id)
-                        .and_then(|r| read_field(&r.op, key))
+                        .and_then(|r| r.inst.values.get(key))
+                        .and_then(ParamValue::as_bool)
                 })
-                .unwrap_or(if default { 1.0 } else { 0.0 })
+                .unwrap_or(default)
             });
-
-            let on_commit = Callback::new(move |raw: f64| {
-                on_edit.run((id, set_field_closure(key, kind, raw)));
+            let on_commit = Callback::new(move |checked: bool| {
+                on_edit.run((id, key.to_string(), ParamValue::Bool(checked)));
             });
 
             view! {
                 <label class="flex items-center gap-2 text-xs text-slate-400 p-3">
                     <input
                         type="checkbox"
-                        prop:checked=move || value.get() != 0.0
-                        on:change=move |ev| {
-                            let checked = event_target_checked(&ev);
-                            on_commit.run(if checked { 1.0 } else { 0.0 });
-                        }
+                        prop:checked=move || value.get()
+                        on:change=move |ev| on_commit.run(event_target_checked(&ev))
                     />
                     {p.label}
                 </label>
             }
             .into_any()
         }
+
+        // Palette / Dither are not generic scalar params; palette_map has its
+        // own config. If one appears here it's a routing bug, so surface it.
+        ParamKind::Palette { .. } | ParamKind::Dither { .. } => view! {
+            <p class="text-xs text-red-400 p-3">
+                "param '"{p.key}"' is not a scalar; wrong config path"
+            </p>
+        }
+        .into_any(),
     }
 }
 
-/// The generic config view: render every descriptor param for this op's tag.
+/// Render every descriptor param for this op's tag, reading/writing the bag.
 pub fn generic_op_config(
     id: usize,
-    op: &Operation,
+    tag: &str,
     rows: ReadSignal<Vec<OpRow>>,
     on_edit: Callback<EditPayload>,
 ) -> AnyView {
-    let tag = op_tag(op);
-    let Some(variant) = variant_for(&tag) else {
+    let Some(variant) = op_variants().iter().find(|v| v.tag == tag) else {
+        let tag = tag.to_string();
         return view! { <p class="text-xs text-red-400 p-3">"No descriptor for "{tag}</p> }
             .into_any();
     };

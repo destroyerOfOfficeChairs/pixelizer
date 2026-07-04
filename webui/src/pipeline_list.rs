@@ -1,36 +1,11 @@
+use crate::op_instance::default_instance;
 use crate::{EditPayload, OpRow, op_card};
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use op_card::OpCard;
-use pixelizer_core::{Operation, Pipeline};
-
-const ALL_LABELS: &[&str] = &[
-    "Downsample",
-    "Palette Map",
-    "Upscale",
-    "Posterize",
-    "Blur",
-    "Normalize",
-];
-
-fn default_op(label: &str) -> Operation {
-    match label {
-        "Downsample" => Operation::Downsample { pixel_size: 8 },
-        "Palette Map" => Operation::PaletteMap {
-            colors: vec!["#000000".to_owned(), "#ffffff".to_owned()],
-            dither: None,
-        },
-        "Upscale" => Operation::Upscale { factor: 8 },
-        "Posterize" => Operation::Posterize { levels: 4 },
-        "Blur" => Operation::Blur { sigma: 1.0 },
-        "Normalize" => Operation::Normalize {
-            low: 0.01,
-            high: 0.99,
-        },
-        _ => Operation::Downsample { pixel_size: 8 },
-    }
-}
+use pixelizer_core::Pipeline;
+use pixelizer_core::op_schema::all_op_menu;
 
 #[component]
 pub fn PipelineList(
@@ -57,31 +32,41 @@ pub fn PipelineList(
     let remove_op = move |id: usize| {
         set_rows.update(|rows| rows.retain(|r| r.id != id));
     };
-    let add_op = move |label: String| {
+    let add_op = move |tag: String| {
+        let Some(inst) = default_instance(&tag) else {
+            return;
+        };
         let id = next_id.get_value();
         next_id.set_value(id + 1);
-        set_rows.update(|rows| {
-            rows.push(OpRow {
-                id,
-                op: default_op(&label),
-            })
-        });
+        set_rows.update(|rows| rows.push(OpRow { id, inst }));
     };
 
-    let edit_op = Callback::new(move |(id, f): EditPayload| {
+    // The single write path for every param edit. A Config emits (id, key,
+    // value); we drop it into that instance's bag. No closures, no serde.
+    let edit_op = Callback::new(move |(id, key, value): EditPayload| {
         set_rows.update(|rows| {
             if let Some(r) = rows.iter_mut().find(|r| r.id == id) {
-                f(&mut r.op);
+                r.inst.values.insert(key, value);
             }
         });
     });
 
-    // Serialize lazily. Only called when the preview is shown (see view below),
-    // and re-runs reactively as `rows` changes while shown.
+    // Serialize lazily. Only called when the preview is shown, and re-runs
+    // reactively as `rows` changes while shown. Builds the typed pipeline via
+    // the boundary conversion; a malformed bag renders as an error string.
     let pipeline_yaml = move || {
-        let ops: Vec<Operation> = rows.get().into_iter().map(|r| r.op).collect();
-        let pipeline = Pipeline { operations: ops };
-        serde_yaml::to_string(&pipeline).unwrap_or_else(|e| format!("error: {e}"))
+        let built: Result<Vec<_>, _> = rows
+            .get()
+            .into_iter()
+            .map(|r| r.inst.to_operation())
+            .collect();
+        match built {
+            Ok(operations) => {
+                let pipeline = Pipeline { operations };
+                serde_yaml::to_string(&pipeline).unwrap_or_else(|e| format!("error: {e}"))
+            }
+            Err(e) => format!("error: {e}"),
+        }
     };
 
     // Copy to clipboard, then flash "Copied!" for ~1.2s. We only flip `copied`
@@ -93,7 +78,6 @@ pub fn PipelineList(
                 return;
             };
             let clipboard = window.navigator().clipboard();
-            // write_text returns a JS Promise; await it via JsFuture.
             let promise = clipboard.write_text(&text);
             if wasm_bindgen_futures::JsFuture::from(promise).await.is_ok() {
                 copied.set(true);
@@ -115,7 +99,7 @@ pub fn PipelineList(
                         view! {
                             <OpCard
                                 id=id
-                                op=r.op.clone()
+                                tag=r.inst.tag.clone()
                                 rows=rows
                                 on_move=Callback::new(move |dir: i32| move_op(id, dir))
                                 on_remove=Callback::new(move |_| remove_op(id))
@@ -129,17 +113,17 @@ pub fn PipelineList(
             <select
                 class="bg-slate-900 border border-slate-700 rounded-md text-sm text-slate-200 p-2"
                 on:change=move |ev| {
-                    let label = event_target_value(&ev);
-                    if !label.is_empty() { add_op(label); }
+                    let tag = event_target_value(&ev);
+                    if !tag.is_empty() { add_op(tag); }
                 }
             >
                 <option value="">"+ Add operation…"</option>
-                {ALL_LABELS.iter().map(|l| view! {
-                    <option value=*l>{*l}</option>
+                {all_op_menu().into_iter().map(|(tag, label)| view! {
+                    <option value=tag>{label}</option>
                 }).collect_view()}
             </select>
 
-            // ---- Run pipeline button (moved in from App) ----
+            // ---- Run pipeline button ----
             <button
                 class="bg-teal-600 hover:bg-teal-500 disabled:bg-slate-700 disabled:text-slate-500 text-white font-bold rounded-md px-4 py-2"
                 prop:disabled=move || !can_run.get()
@@ -148,7 +132,7 @@ pub fn PipelineList(
                 "Run pipeline"
             </button>
 
-            // ---- YAML preview (below the run button) ----
+            // ---- YAML preview ----
             <div class="mt-2 flex flex-col gap-2">
                 <label class="flex items-center gap-3 cursor-pointer select-none">
                     <span class="text-sm font-bold text-teal-300">"Pipeline YAML"</span>

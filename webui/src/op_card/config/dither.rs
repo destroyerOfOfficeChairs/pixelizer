@@ -1,121 +1,61 @@
 use crate::op_card::config::generic_config::sliders::{FloatSlider, IntSlider, decimals_for_step};
-use crate::op_card::config::{read_f64, read_i64, typed_value};
+use crate::op_instance::{DitherChoice, ParamValue, default_dither_choice};
 use crate::{EditPayload, OpRow};
 use leptos::prelude::*;
-use pixelizer_core::Operation;
-use pixelizer_core::ui_api::{ParamKind, VariantDescriptor, dither_variants};
-use serde_json::{Map, Value};
+use pixelizer_core::op_schema::{ParamDescriptor, ParamKind, dither_variants};
+
+const DITHER_KEY: &str = "dither";
 
 // ----------------------------------------------------------------------------
-// Reading the nested dither state
+// Reading the nested dither state directly from the value bag.
 // ----------------------------------------------------------------------------
 
-/// Pull the live `Option<DitherConfig>` for this op out of the rows signal,
-/// already serialized to a JSON object. `None` means "no dithering".
-/// The object, when present, looks like:
-///   { "algorithm": "atkinson", "bleed": 1.0, "clamp": false }
-fn read_dither_obj(rows: ReadSignal<Vec<OpRow>>, id: usize) -> Option<Map<String, Value>> {
+/// The live DitherChoice for this op, if dithering is on. Reads the bag; no
+/// serialization anywhere.
+fn read_choice(rows: ReadSignal<Vec<OpRow>>, id: usize) -> Option<DitherChoice> {
     rows.with(|rs| {
-        rs.iter().find(|r| r.id == id).and_then(|r| match &r.op {
-            Operation::PaletteMap { dither, .. } => {
-                dither.as_ref().and_then(|d| match serde_json::to_value(d) {
-                    Ok(Value::Object(m)) => Some(m),
-                    _ => None,
-                })
-            }
-            _ => None,
-        })
+        rs.iter()
+            .find(|r| r.id == id)
+            .and_then(|r| r.inst.values.get(DITHER_KEY))
+            .and_then(|v| match v {
+                ParamValue::Dither(choice) => choice.clone(),
+                _ => None,
+            })
     })
 }
 
-/// The current variant tag ("atkinson", "bayer4", …), or None when off.
+/// The current variant tag, or None when dithering is off.
 fn current_tag(rows: ReadSignal<Vec<OpRow>>, id: usize) -> Option<String> {
-    read_dither_obj(rows, id).and_then(|m| {
-        m.get("algorithm")
-            .and_then(Value::as_str)
-            .map(str::to_string)
-    })
+    read_choice(rows, id).map(|c| c.tag)
+}
+
+/// Commit a new dither state (Some choice / None) as one value under "dither".
+fn commit(on_edit: Callback<EditPayload>, id: usize, choice: Option<DitherChoice>) {
+    on_edit.run((id, DITHER_KEY.to_string(), ParamValue::Dither(choice)));
 }
 
 // ----------------------------------------------------------------------------
-// Building a fresh DitherConfig from a descriptor's defaults
-// ----------------------------------------------------------------------------
-
-/// Construct the JSON object for a dither variant entirely from its descriptor
-/// defaults. This is what lets variant-switching stay generic: we never carry
-/// fields across (bleed/clamp vs strength don't overlap) — we materialize the
-/// new variant clean. Adding a variant to the table needs no change here.
-fn default_obj_for(v: &VariantDescriptor) -> Map<String, Value> {
-    let mut m = Map::new();
-    m.insert("algorithm".to_string(), Value::String(v.tag.to_string()));
-    for p in v.params {
-        let val = match p.kind {
-            ParamKind::Float { default, .. } => serde_json::json!(default),
-            ParamKind::Int { default, .. } => serde_json::json!(default),
-            ParamKind::Bool { default } => serde_json::json!(default),
-        };
-        m.insert(p.key.to_string(), val);
-    }
-    m
-}
-
-/// Edit closure: set `dither` to the given JSON object (or None to clear it).
-/// Round-trips through serde so a malformed object leaves the op untouched
-/// rather than corrupting it.
-fn set_dither_closure(obj: Option<Map<String, Value>>) -> Box<dyn Fn(&mut Operation)> {
-    Box::new(move |op: &mut Operation| {
-        if let Operation::PaletteMap { dither, .. } = op {
-            match &obj {
-                None => *dither = None,
-                Some(m) => {
-                    if let Ok(cfg) = serde_json::from_value(Value::Object(m.clone())) {
-                        *dither = Some(cfg);
-                    }
-                }
-            }
-        }
-    })
-}
-
-/// Edit closure: set ONE param key inside the existing dither object. Reads the
-/// live object, overwrites `key` with the typed value, writes it back. If there
-/// is no dither yet (toggle off), this is a no-op by construction.
-fn set_dither_field_closure(
-    rows: ReadSignal<Vec<OpRow>>,
-    id: usize,
-    key: &'static str,
-    kind: ParamKind,
-    new_val: f64,
-) -> Box<dyn Fn(&mut Operation)> {
-    // Capture the current object now; the closure runs against op in place but
-    // we need the sibling fields (algorithm + the other param) to ride along.
-    let current = read_dither_obj(rows, id);
-    Box::new(move |op: &mut Operation| {
-        let Operation::PaletteMap { dither, .. } = op else {
-            return;
-        };
-        let Some(mut m) = current.clone() else {
-            return;
-        };
-        m.insert(key.to_string(), typed_value(kind, new_val));
-        if let Ok(cfg) = serde_json::from_value(Value::Object(m)) {
-            *dither = Some(cfg);
-        }
-    })
-}
-
-// ----------------------------------------------------------------------------
-// Param sliders (reuse the generic slider components)
+// Param sliders — read a scalar out of the choice's bag, write the whole
+// updated choice back. Because a commit replaces the entire DitherChoice, each
+// edit clones the current choice, mutates one key, and sends it.
 // ----------------------------------------------------------------------------
 
 fn dither_param_widget(
     id: usize,
     rows: ReadSignal<Vec<OpRow>>,
     on_edit: Callback<EditPayload>,
-    p: &'static pixelizer_core::ui_api::ParamDescriptor,
+    p: &'static ParamDescriptor,
 ) -> AnyView {
     let key = p.key;
     let kind = p.kind;
+
+    // Shared: produce a new choice with `key` set to `value`, then commit.
+    let commit_field = move |value: ParamValue| {
+        if let Some(mut choice) = read_choice(rows, id) {
+            choice.values.insert(key.to_string(), value);
+            commit(on_edit, id, Some(choice));
+        }
+    };
 
     match kind {
         ParamKind::Float {
@@ -125,13 +65,11 @@ fn dither_param_widget(
             step,
         } => {
             let value = Signal::derive(move || {
-                read_dither_obj(rows, id)
-                    .and_then(|m| read_f64(&m, key))
+                read_choice(rows, id)
+                    .and_then(|c| c.values.get(key).and_then(ParamValue::as_num))
                     .unwrap_or(default as f64)
             });
-            let on_commit = Callback::new(move |raw: f64| {
-                on_edit.run((id, set_dither_field_closure(rows, id, key, kind, raw)));
-            });
+            let on_commit = Callback::new(move |raw: f64| commit_field(ParamValue::Num(raw)));
             view! {
                 <FloatSlider
                     label=p.label
@@ -146,15 +84,13 @@ fn dither_param_widget(
 
         ParamKind::Int { default, min, max } => {
             let value = Signal::derive(move || {
-                read_dither_obj(rows, id)
-                    .and_then(|m| read_i64(&m, key))
+                read_choice(rows, id)
+                    .and_then(|c| c.values.get(key).and_then(ParamValue::as_num))
+                    .map(|n| n.round() as i64)
                     .unwrap_or(default)
             });
             let on_commit = Callback::new(move |raw: i64| {
-                on_edit.run((
-                    id,
-                    set_dither_field_closure(rows, id, key, kind, raw as f64),
-                ));
+                commit_field(ParamValue::Num(raw.clamp(min, max) as f64))
             });
             view! {
                 <IntSlider
@@ -169,28 +105,30 @@ fn dither_param_widget(
 
         ParamKind::Bool { default } => {
             let value = Signal::derive(move || {
-                read_dither_obj(rows, id)
-                    .and_then(|m| read_f64(&m, key))
-                    .unwrap_or(if default { 1.0 } else { 0.0 })
+                read_choice(rows, id)
+                    .and_then(|c| c.values.get(key).and_then(ParamValue::as_bool))
+                    .unwrap_or(default)
             });
-            let on_commit = Callback::new(move |raw: f64| {
-                on_edit.run((id, set_dither_field_closure(rows, id, key, kind, raw)));
-            });
+            let on_commit =
+                Callback::new(move |checked: bool| commit_field(ParamValue::Bool(checked)));
             view! {
                 <label class="flex items-center gap-2 text-xs text-slate-400 px-3 pb-2">
                     <input
                         type="checkbox"
-                        prop:checked=move || value.get() != 0.0
-                        on:change=move |ev| {
-                            let checked = event_target_checked(&ev);
-                            on_commit.run(if checked { 1.0 } else { 0.0 });
-                        }
+                        prop:checked=move || value.get()
+                        on:change=move |ev| on_commit.run(event_target_checked(&ev))
                     />
                     {p.label}
                 </label>
             }
             .into_any()
         }
+
+        // A dither variant's params are always scalars; these shouldn't occur.
+        ParamKind::Palette { .. } | ParamKind::Dither { .. } => view! {
+            <p class="text-xs text-red-400 px-3">"non-scalar dither param"</p>
+        }
+        .into_any(),
     }
 }
 
@@ -198,38 +136,35 @@ fn dither_param_widget(
 // The component
 // ----------------------------------------------------------------------------
 
-/// Dither config, rendered as a child of the PaletteMap card. An on/off toggle
-/// controls whether `dither` is Some/None; when on, a variant dropdown plus the
-/// selected variant's descriptor params are shown.
+/// Dither config, a child of the PaletteMap card. On/off toggle drives
+/// Some/None; when on, a variant dropdown plus that variant's params.
 #[component]
 pub fn DitherConfig(
     id: usize,
     rows: ReadSignal<Vec<OpRow>>,
     on_edit: Callback<EditPayload>,
 ) -> impl IntoView {
-    // Is dithering currently on? Reactive over the rows signal.
     let enabled = Signal::derive(move || current_tag(rows, id).is_some());
 
-    // First variant in the table is the default when toggled on.
+    // Toggle on -> default choice (first variant). Toggle off -> None.
     let on_toggle = move |ev: leptos::ev::Event| {
-        let checked = event_target_checked(&ev);
-        let obj = if checked {
-            dither_variants().first().map(default_obj_for)
+        let choice = if event_target_checked(&ev) {
+            dither_variants()
+                .first()
+                .and_then(|v| default_dither_choice(v.tag))
         } else {
             None
         };
-        on_edit.run((id, set_dither_closure(obj)));
+        commit(on_edit, id, choice);
     };
 
-    // Switch variant: materialize the chosen variant fresh from its defaults.
+    // Switch variant -> a fresh default choice for the chosen tag.
     let on_variant = move |ev: leptos::ev::Event| {
         let tag = event_target_value(&ev);
-        if let Some(v) = dither_variants().iter().find(|v| v.tag == tag) {
-            on_edit.run((id, set_dither_closure(Some(default_obj_for(v)))));
-        }
+        commit(on_edit, id, default_dither_choice(&tag));
     };
 
-    // The selected variant's descriptor, to drive the param sliders.
+    // The selected variant descriptor drives the param sliders.
     let selected = Signal::derive(move || {
         current_tag(rows, id).and_then(|tag| dither_variants().iter().find(|v| v.tag == tag))
     });
