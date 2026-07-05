@@ -1,5 +1,6 @@
 use super::dither::DitherConfig;
 use super::generic_config::BoolWidget;
+use super::swatches::Swatches;
 use crate::op_instance::ParamValue;
 use crate::{EditPayload, OpRow, Palettes};
 use leptos::prelude::*;
@@ -11,21 +12,6 @@ pub fn palette_map_config(
     rows: ReadSignal<Vec<OpRow>>,
     on_edit: Callback<EditPayload>,
 ) -> AnyView {
-    // The current palette colors, read from the bag. (Swatch display is future
-    // work; kept live so it reflects the selected palette when built out.)
-    let _colors = Signal::derive(move || {
-        rows.with(|rs| {
-            rs.iter()
-                .find(|r| r.id == id)
-                .and_then(|r| r.inst.values.get(PALETTE_KEY))
-                .and_then(|v| match v {
-                    ParamValue::Palette(c) => Some(c.clone()),
-                    _ => None,
-                })
-        })
-        .unwrap_or_else(|| vec!["#000000".to_owned(), "#ffffff".to_owned()])
-    });
-
     let preloaded_palettes =
         use_context::<StoredValue<Palettes>>().expect("You forgot to provide palettes.");
 
@@ -65,6 +51,9 @@ pub fn palette_map_config(
                     {options}
                 </select>
             </div>
+
+            <Swatches id=id rows=rows palette_key=PALETTE_KEY.to_string()/>
+
             // TODO: Remove hardcoded "default=true", "key=alpha", and "label=preserve alpha" in favor of reading from the op_schema
             <BoolWidget id=id rows=rows on_edit=on_edit default=true key="alpha" label="preserve alpha"/>
 

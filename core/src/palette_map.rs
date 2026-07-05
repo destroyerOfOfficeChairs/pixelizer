@@ -105,6 +105,7 @@ pub fn palette_map(
             foo.max_per_channel,
             bleed,
             clamp,
+            preserve_alpha,
         ),
         Some(DitherConfig::Atkinson { bleed, clamp }) => palette_map_diffuse(
             image,
@@ -115,6 +116,7 @@ pub fn palette_map(
             foo.max_per_channel,
             bleed,
             clamp,
+            preserve_alpha,
         ),
         Some(DitherConfig::Jjn { bleed, clamp }) => palette_map_diffuse(
             image,
@@ -125,12 +127,13 @@ pub fn palette_map(
             foo.max_per_channel,
             bleed,
             clamp,
+            preserve_alpha,
         ),
         Some(DitherConfig::Bayer4 { strength }) => {
-            palette_map_ordered(image, foo.rgb, foo.lab, strength, 4)
+            palette_map_ordered(image, foo.rgb, foo.lab, strength, 4, preserve_alpha)
         }
         Some(DitherConfig::Bayer8 { strength }) => {
-            palette_map_ordered(image, foo.rgb, foo.lab, strength, 8)
+            palette_map_ordered(image, foo.rgb, foo.lab, strength, 8, preserve_alpha)
         }
     }
 }
@@ -169,6 +172,7 @@ pub fn palette_map_diffuse(
     max_per_channel: [f32; 3],
     bleed: f32,
     clamp: bool,
+    preserve_alpha: bool,
 ) -> Result<Image, crate::PixelizerError> {
     let (w, h) = img.dimensions();
 
@@ -184,7 +188,10 @@ pub fn palette_map_diffuse(
         })
         .collect();
 
-    let alpha: Vec<u8> = img.pixels().map(|p| p.0[3]).collect();
+    let alpha: Vec<u8> = img
+        .pixels()
+        .map(|p| if preserve_alpha { p.0[3] } else { 255 })
+        .collect();
     let mut out = Image::new(w, h);
 
     let idx = |x: u32, y: u32| (y * w + x) as usize;
@@ -235,6 +242,7 @@ pub fn palette_map_ordered(
     lab: Vec<Oklab>,
     strength: f32,
     size: usize,
+    preserve_alpha: bool,
 ) -> Result<Image, crate::PixelizerError> {
     let (w, h) = image.dimensions();
     let mut out = Image::new(w, h);
@@ -246,7 +254,10 @@ pub fn palette_map_ordered(
     };
 
     for (x, y, pixel) in image.enumerate_pixels() {
-        let [r, g, b, a] = pixel.0;
+        let [r, g, b, mut a] = pixel.0;
+        if !preserve_alpha {
+            a = 255
+        };
         let bias = match matrix {
             BayerMatrix::Four(m) => m[(y as usize) % size][(x as usize) % size] * strength,
             BayerMatrix::Eight(m) => m[(y as usize) % size][(x as usize) % size] * strength,
