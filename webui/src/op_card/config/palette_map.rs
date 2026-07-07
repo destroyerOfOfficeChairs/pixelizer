@@ -52,7 +52,7 @@ pub fn palette_map_config(
                 </select>
             </div>
 
-            <Swatches id=id rows=rows palette_key=PALETTE_KEY.to_string()/>
+            <Swatches id=id rows=rows on_edit=on_edit palette_key=PALETTE_KEY.to_string()/>
 
             // TODO: Remove hardcoded "default=true", "key=alpha", and "label=preserve alpha" in favor of reading from the op_schema
             <BoolWidget id=id rows=rows on_edit=on_edit default=true key="alpha" label="preserve alpha"/>
