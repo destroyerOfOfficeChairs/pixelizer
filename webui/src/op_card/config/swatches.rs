@@ -60,7 +60,7 @@ pub fn Swatches(
                     <div
                         class="group relative w-8 h-8 cursor-pointer"
                         style:background-color=hex
-                        on:click=move |_| leptos::logging::log!("clicked a swatch")
+                        on:click=move |ev: leptos::ev::MouseEvent| swatch_clicked(ev)
                     >
                         <span class="absolute -top-1 -right-1 hidden group-hover:flex
                                     items-center justify-center w-4 h-4 rounded-full
@@ -83,4 +83,22 @@ pub fn Swatches(
         </div>
     }
     .into_any()
+}
+
+fn swatch_clicked(ev: leptos::ev::MouseEvent) {
+    ev.stop_propagation();
+    let target = event_target::<web_sys::Element>(&ev);
+    let rect = target.get_bounding_client_rect();
+    leptos::logging::log!("clicked a swatch");
+    leptos::logging::log!("x: {}", rect.x());
+    leptos::logging::log!("y: {}", rect.y());
+    leptos::logging::log!("width: {}", rect.width());
+    leptos::logging::log!("height: {}", rect.height());
+    let x = rect.x();
+    let y = rect.y() + rect.height();
+    spawn_picker(x, y);
+}
+
+fn spawn_picker(x: f64, y: f64) {
+    leptos::logging::log!("Hello from spawn_picker()");
 }
