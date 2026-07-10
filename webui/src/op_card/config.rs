@@ -1,3 +1,4 @@
+mod color_picker;
 mod dither;
 mod generic_config;
 mod palette_map;

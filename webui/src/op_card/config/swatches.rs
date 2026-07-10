@@ -1,11 +1,14 @@
+use super::color_picker::ColorPicker;
 use crate::op_instance::ParamValue;
 use crate::{EditPayload, OpRow};
+use leptos::portal::Portal;
 use leptos::prelude::*;
 
-struct PickerAnchor {
-    sid: usize,
-    x: f64,
-    y: f64,
+#[derive(Clone, Copy)]
+pub struct PickerAnchor {
+    pub sid: usize,
+    pub x: f64,
+    pub y: f64,
 }
 
 #[component]
@@ -87,6 +90,14 @@ pub fn Swatches(
                     </div>
                 }
             />
+            {move || editing.get().map(|anchor| view! {
+                <Portal>
+                    <ColorPicker
+                        anchor=anchor
+                        on_close=Callback::new(move |_| editing.set(None))
+                    />
+                </Portal>
+            })}
         </div>
     }
     .into_any()
