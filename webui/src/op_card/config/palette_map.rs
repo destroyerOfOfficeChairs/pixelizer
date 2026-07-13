@@ -5,7 +5,7 @@ use crate::op_instance::ParamValue;
 use crate::{EditPayload, OpRow, Palettes};
 use leptos::prelude::*;
 
-const PALETTE_KEY: &str = "palette";
+const PALETTE_KEY: &'static str = "palette";
 
 pub fn palette_map_config(
     id: usize,
@@ -52,7 +52,7 @@ pub fn palette_map_config(
                 </select>
             </div>
 
-            <Swatches id=id rows=rows on_edit=on_edit palette_key=PALETTE_KEY.to_string()/>
+            <Swatches id=id rows=rows on_edit=on_edit palette_key=PALETTE_KEY/>
 
             // TODO: Remove hardcoded "default=true", "key=alpha", and "label=preserve alpha" in favor of reading from the op_schema
             <BoolWidget id=id rows=rows on_edit=on_edit default=true key="alpha" label="preserve alpha"/>
