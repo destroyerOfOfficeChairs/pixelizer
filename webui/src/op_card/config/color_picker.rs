@@ -44,6 +44,7 @@ pub fn ColorPicker(
     let square: NodeRef<html::Div> = NodeRef::new();
 
     let dragging = RwSignal::new(Dragging::None);
+    let typing = RwSignal::new(false);
 
     let apply_square = move |client_x: f64, client_y: f64| {
         if let Some(el) = square.get_untracked() {
@@ -148,10 +149,23 @@ pub fn ColorPicker(
                 <div class="flex items-center flex-1 bg-slate-900 border border-slate-700 rounded px-2">
                     <span class="text-slate-500 text-sm font-mono">"#"</span>
                     <input
-                        class="flex-1 bg-transparent text-slate-200 text-sm font-mono \
-                               px-1 py-1 outline-none w-full"
+                        class="flex-1 bg-transparent text-slate-200 text-sm font-mono px-1 py-1 outline-none w-full"
                         type="text"
-                        prop:value=move || input_text.get().trim_start_matches('#').to_string()
+                        // Show the buffer while focused (so typing isn't fought by drags);
+                        // show the live color otherwise (so drags update the box).
+                        prop:value=move || {
+                            if typing.get() {
+                                input_text.get().trim_start_matches('#').to_string()
+                            } else {
+                                working.get().trim_start_matches('#').to_string()
+                            }
+                        }
+                        on:focus=move |_| {
+                            // Seed the buffer from the current live color, then hand control to typing.
+                            input_text.set(working.get_untracked());
+                            typing.set(true);
+                        }
+                        on:blur=move |_| typing.set(false)
                         on:input=move |ev| {
                             let text = event_target_value(&ev);
                             input_text.set(text.clone());
