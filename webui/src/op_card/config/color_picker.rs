@@ -1,11 +1,21 @@
 use super::swatches::PickerAnchor;
+use leptos::ev::pointermove;
+use leptos::ev::pointerup;
+use leptos::html;
 use leptos::prelude::*;
-use leptos_use::on_click_outside;
+use leptos_use::{on_click_outside, use_event_listener};
 
 #[derive(Debug, PartialEq)]
 pub enum HexError {
     InvalidLength,
     InvalidCharacter,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum Dragging {
+    None,
+    Square,
+    Slider,
 }
 
 #[component]
@@ -30,84 +40,137 @@ pub fn ColorPicker(
         leptos::logging::log!("working.get(): {}", working.get());
     };
 
-    let slider: NodeRef<html::div> = NodeRef::new();
-    let square: NodeRef<html::div> = NodeRef::new();
+    let slider: NodeRef<html::Div> = NodeRef::new();
+    let square: NodeRef<html::Div> = NodeRef::new();
 
-    on_click_outside(picker_ref, move |_| on_close.run(()));
+    let dragging = RwSignal::new(Dragging::None);
+
+    let apply_square = move |client_x: f64, client_y: f64| {
+        if let Some(el) = square.get_untracked() {
+            let rect = el.get_bounding_client_rect();
+            let s = ((client_x - rect.left()) / rect.width()).clamp(0.0, 1.0);
+            let v = 1.0 - ((client_y - rect.top()) / rect.height()).clamp(0.0, 1.0);
+            sat.set(s);
+            val.set(v);
+        }
+    };
+
+    let apply_slider = move |client_x: f64| {
+        if let Some(el) = slider.get_untracked() {
+            let rect = el.get_bounding_client_rect();
+            let frac = ((client_x - rect.left()) / rect.width()).clamp(0.0, 1.0);
+            hue.set(frac * 360.0);
+        }
+    };
+
+    let _ = use_event_listener(window(), pointermove, move |ev| {
+        match dragging.get_untracked() {
+            Dragging::Square => apply_square(ev.client_x() as f64, ev.client_y() as f64),
+            Dragging::Slider => apply_slider(ev.client_x() as f64),
+            Dragging::None => {}
+        }
+    });
+
+    let _ = use_event_listener(window(), pointerup, move |_| {
+        dragging.set(Dragging::None);
+    });
+
+    let _ = on_click_outside(picker_ref, move |_| on_close.run(()));
 
     view! {
         <div
             node_ref=picker_ref
-            class="fixed z-50 w-64 h-auto bg-slate-800 border border-slate-600 rounded shadow-lg flex flex-col gap-2 p-3"
+            class="fixed z-50 w-60 bg-slate-800 border border-slate-700 rounded-lg shadow-xl \
+                   flex flex-col gap-3 p-3 select-none"
             style:left=format!("{}px", anchor.x)
             style:top=format!("{}px", anchor.y)
         >
-            <button on:click=move |_| on_close.run(())>"×"</button>
-            "picker for swatch " {anchor.sid}
-            <div // Swatch being edited
-                class="w-8 h-8"
-                style:background-color=move || working.get()
-            />
-            <div // Static swatch
-                class="w-8 h-8"
-                style:background-color=move || hex.get()
-            />
-            <input
-                type="text"
-                prop:value=move || input_text.get()
-                on:input=move |ev| {
-                    let text = event_target_value(&ev);
-                    input_text.set(text.clone());
-                    if let Ok(rgb) = hex_to_rgb(&text) {
-                        let (h, s, v) = rgb_to_hsv(rgb);
-                        hue.set(h);
-                        sat.set(s);
-                        val.set(v);
-                    }
-                }
-            />
-            <div class="relative w-full h-4">
-                <div
-                    class="w-full h-4 rounded cursor-pointer"
-                    style:background="linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)"
-                    on:click=move |ev: leptos::ev::MouseEvent| {
-                        let el = event_target::<web_sys::Element>(&ev);
-                        let rect = el.get_bounding_client_rect();
-                        let frac = ((ev.client_x() as f64 - rect.left()) / rect.width()).clamp(0.0, 1.0);
-                        hue.set(frac * 360.0);
-                    }
-                    node_ref=slider
-                />
-                <div class="absolute w-1 h-4 bg-white border border-black pointer-events-none"
-                    style:left=move || format!("{}%", hue.get() / 360.0 * 100.0)
-                />
+            // Header: title + close
+            <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-slate-400">"Edit color"</span>
+                <button
+                    class="text-slate-500 hover:text-slate-200 leading-none text-lg"
+                    on:click=move |_| on_close.run(())
+                >"×"</button>
             </div>
-            <div class="relative w-full h-32">
+
+            // S/V square — the hero, given the most space
+            <div class="relative w-full h-40 rounded overflow-hidden">
                 <div
-                    class="w-full h-32 cursor-crosshair"
+                    node_ref=square
+                    class="w-full h-full cursor-crosshair select-none"
                     style:background=move || format!(
                         "linear-gradient(to bottom, transparent, #000), \
-                        linear-gradient(to right, #fff, transparent), \
-                        hsl({}, 100%, 50%)",
+                         linear-gradient(to right, #fff, transparent), \
+                         hsl({}, 100%, 50%)",
                         hue.get()
                     )
-                    on:click=move |ev: leptos::ev::MouseEvent| {
-                        let el = event_target::<web_sys::Element>(&ev);
-                        let rect = el.get_bounding_client_rect();
-                        let s = ((ev.client_x() as f64 - rect.left()) / rect.width()).clamp(0.0, 1.0);
-                        let v = 1.0 - ((ev.client_y() as f64 - rect.top()) / rect.height()).clamp(0.0, 1.0);
-                        sat.set(s);
-                        val.set(v);
+                    on:pointerdown=move |ev| {
+                        ev.prevent_default();
+                        dragging.set(Dragging::Square);
+                        apply_square(ev.client_x() as f64, ev.client_y() as f64);
                     }
-                    node_ref=square
                 />
                 <div
-                    class="absolute w-3 h-3 rounded-full border-2 border-white pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                    class="absolute w-4 h-4 rounded-full border-2 border-white shadow \
+                           pointer-events-none -translate-x-1/2 -translate-y-1/2"
                     style:left=move || format!("{}%", sat.get() * 100.0)
                     style:top=move || format!("{}%", (1.0 - val.get()) * 100.0)
                 />
             </div>
-            <button on:click=submit_handler>"Submit"</button>
+
+            // Hue strip
+            <div class="relative w-full h-3">
+                <div
+                    node_ref=slider
+                    class="w-full h-3 rounded-full cursor-pointer select-none"
+                    style:background="linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)"
+                    on:pointerdown=move |ev| {
+                        ev.prevent_default();
+                        dragging.set(Dragging::Slider);
+                        apply_slider(ev.client_x() as f64);
+                    }
+                />
+                <div
+                    class="absolute top-1/2 w-3 h-3 rounded-full bg-white border border-slate-900 \
+                           shadow pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                    style:left=move || format!("{}%", hue.get() / 360.0 * 100.0)
+                />
+            </div>
+
+            // Preview pair + hex input
+            <div class="flex items-center gap-2">
+                // current (was) over new (working), stacked halves in one rounded box
+                <div class="flex flex-col w-8 h-8 rounded overflow-hidden border border-slate-700 shrink-0">
+                    <div class="flex-1" style:background-color=move || hex.get()/>
+                    <div class="flex-1" style:background-color=move || working.get()/>
+                </div>
+                <div class="flex items-center flex-1 bg-slate-900 border border-slate-700 rounded px-2">
+                    <span class="text-slate-500 text-sm font-mono">"#"</span>
+                    <input
+                        class="flex-1 bg-transparent text-slate-200 text-sm font-mono \
+                               px-1 py-1 outline-none w-full"
+                        type="text"
+                        prop:value=move || input_text.get().trim_start_matches('#').to_string()
+                        on:input=move |ev| {
+                            let text = event_target_value(&ev);
+                            input_text.set(text.clone());
+                            if let Ok(rgb) = hex_to_rgb(&text) {
+                                let (h, s, v) = rgb_to_hsv(rgb);
+                                hue.set(h);
+                                sat.set(s);
+                                val.set(v);
+                            }
+                        }
+                    />
+                </div>
+            </div>
+
+            <button
+                class="w-full bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium \
+                       rounded py-1.5"
+                on:click=submit_handler
+            >"Done"</button>
         </div>
     }
 }
