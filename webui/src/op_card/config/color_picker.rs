@@ -8,12 +8,6 @@ pub enum HexError {
     InvalidCharacter,
 }
 
-// #[derive(Debug)]
-// pub enum RgbError {
-//     InvalidRange,
-//     InvalidTupleLength,
-// }
-
 #[component]
 pub fn ColorPicker(
     anchor: PickerAnchor,
@@ -22,27 +16,29 @@ pub fn ColorPicker(
     hex: Signal<String>,
 ) -> impl IntoView {
     let picker_ref = NodeRef::<leptos::html::Div>::new();
-    let working = RwSignal::new(hex.get_untracked());
     let input_text = RwSignal::new(hex.get_untracked().trim_start_matches('#').to_string());
-
-    // let apply = move || {
-    //     let text = input_text.get();
-    //     if hex_to_rgb(&text).is_ok() {
-    //         working.set(format!("#{}", text.trim_start_matches('#')));
-    //     }
-    // };
+    let (h0, s0, v0) = hex_to_rgb(&hex.get_untracked())
+        .map(rgb_to_hsv)
+        .unwrap_or((0.0, 0.0, 0.0));
+    let hue = RwSignal::new(h0);
+    let sat = RwSignal::new(s0);
+    let val = RwSignal::new(v0);
+    let working = Signal::derive(move || rgb_to_hex(hsv_to_rgb((hue.get(), sat.get(), val.get()))));
 
     let submit_handler = move |_| {
         on_pick.run(working.get());
         leptos::logging::log!("working.get(): {}", working.get());
     };
 
+    let slider: NodeRef<html::div> = NodeRef::new();
+    let square: NodeRef<html::div> = NodeRef::new();
+
     on_click_outside(picker_ref, move |_| on_close.run(()));
 
     view! {
         <div
             node_ref=picker_ref
-            class="fixed z-50 w-48 h-48 bg-slate-800 border border-slate-600 rounded shadow-lg"
+            class="fixed z-50 w-64 h-auto bg-slate-800 border border-slate-600 rounded shadow-lg flex flex-col gap-2 p-3"
             style:left=format!("{}px", anchor.x)
             style:top=format!("{}px", anchor.y)
         >
@@ -61,16 +57,56 @@ pub fn ColorPicker(
                 prop:value=move || input_text.get()
                 on:input=move |ev| {
                     let text = event_target_value(&ev);
-                    input_text.set(text.clone());              // buffer always tracks the box
-                    if hex_to_rgb(&text).is_ok() {             // gate
-                        working.set(format!("#{}", text.trim_start_matches('#')));
+                    input_text.set(text.clone());
+                    if let Ok(rgb) = hex_to_rgb(&text) {
+                        let (h, s, v) = rgb_to_hsv(rgb);
+                        hue.set(h);
+                        sat.set(s);
+                        val.set(v);
                     }
                 }
-                // on:keydown=move |ev: leptos::ev::KeyboardEvent| {
-                //     if ev.key() == "Enter" { apply(); }
-                // }
             />
-            // <button on:click=move |_| {on_pick.run(working.get()); on_close.run(apply());}>"Submit"</button>
+            <div class="relative w-full h-4">
+                <div
+                    class="w-full h-4 rounded cursor-pointer"
+                    style:background="linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)"
+                    on:click=move |ev: leptos::ev::MouseEvent| {
+                        let el = event_target::<web_sys::Element>(&ev);
+                        let rect = el.get_bounding_client_rect();
+                        let frac = ((ev.client_x() as f64 - rect.left()) / rect.width()).clamp(0.0, 1.0);
+                        hue.set(frac * 360.0);
+                    }
+                    node_ref=slider
+                />
+                <div class="absolute w-1 h-4 bg-white border border-black pointer-events-none"
+                    style:left=move || format!("{}%", hue.get() / 360.0 * 100.0)
+                />
+            </div>
+            <div class="relative w-full h-32">
+                <div
+                    class="w-full h-32 cursor-crosshair"
+                    style:background=move || format!(
+                        "linear-gradient(to bottom, transparent, #000), \
+                        linear-gradient(to right, #fff, transparent), \
+                        hsl({}, 100%, 50%)",
+                        hue.get()
+                    )
+                    on:click=move |ev: leptos::ev::MouseEvent| {
+                        let el = event_target::<web_sys::Element>(&ev);
+                        let rect = el.get_bounding_client_rect();
+                        let s = ((ev.client_x() as f64 - rect.left()) / rect.width()).clamp(0.0, 1.0);
+                        let v = 1.0 - ((ev.client_y() as f64 - rect.top()) / rect.height()).clamp(0.0, 1.0);
+                        sat.set(s);
+                        val.set(v);
+                    }
+                    node_ref=square
+                />
+                <div
+                    class="absolute w-3 h-3 rounded-full border-2 border-white pointer-events-none -translate-x-1/2 -translate-y-1/2"
+                    style:left=move || format!("{}%", sat.get() * 100.0)
+                    style:top=move || format!("{}%", (1.0 - val.get()) * 100.0)
+                />
+            </div>
             <button on:click=submit_handler>"Submit"</button>
         </div>
     }
@@ -135,4 +171,51 @@ fn rgb_to_hsv(rgb: (u8, u8, u8)) -> (f64, f64, f64) {
     // let val = max * 100.0;
     let val = max;
     (hue, sat, val)
+}
+
+/// H in [0, 360), S and V in [0, 1]. Returns (r, g, b) as u8.
+fn hsv_to_rgb(hsv: (f64, f64, f64)) -> (u8, u8, u8) {
+    let (h, s, v) = hsv;
+
+    // Chroma: the "colorfulness" — the spread between the max and min channel.
+    let c = v * s;
+    // Which 60° sextant of the wheel are we in? (0..6)
+    let h_prime = (h % 360.0) / 60.0;
+    // Second-largest component, ramping up and down within the sextant.
+    let x = c * (1.0 - ((h_prime % 2.0) - 1.0).abs());
+    // The amount to lift all three channels so the max lands on v.
+    let m = v - c;
+
+    let (r1, g1, b1) = match h_prime as u32 {
+        0 => (c, x, 0.0), //   0°– 60°  red   → yellow
+        1 => (x, c, 0.0), //  60°–120°  yellow→ green
+        2 => (0.0, c, x), // 120°–180°  green → cyan
+        3 => (0.0, x, c), // 180°–240°  cyan  → blue
+        4 => (x, 0.0, c), // 240°–300°  blue  → magenta
+        _ => (c, 0.0, x), // 300°–360°  magenta → red
+    };
+
+    let to_u8 = |f: f64| ((f + m) * 255.0).round().clamp(0.0, 255.0) as u8;
+    (to_u8(r1), to_u8(g1), to_u8(b1))
+}
+
+fn rgb_to_hex(rgb: (u8, u8, u8)) -> String {
+    let (r, g, b) = rgb;
+    format!("#{:02x}{:02x}{:02x}", r, g, b)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hsv_roundtrip() {
+        for hex in [
+            "#9bbc0f", "#2c2416", "#ff004d", "#000000", "#ffffff", "#808080",
+        ] {
+            let rgb = hex_to_rgb(hex).unwrap();
+            let back = rgb_to_hex(hsv_to_rgb(rgb_to_hsv(rgb)));
+            assert_eq!(hex, back, "roundtrip failed for {hex}");
+        }
+    }
 }
