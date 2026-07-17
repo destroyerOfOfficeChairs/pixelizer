@@ -9,6 +9,7 @@ pub struct PickerAnchor {
     pub sid: usize,
     pub x: f64,
     pub y: f64,
+    pub is_new: bool,
 }
 
 #[component]
@@ -106,13 +107,45 @@ pub fn Swatches(
                     }
                 }
             />
+            <div
+                class="w-8 h-8 border border-dashed border-slate-600 rounded
+                    flex items-center justify-center text-slate-500
+                    hover:border-slate-400 hover:text-slate-300 cursor-pointer"
+                on:click=move |ev: leptos::ev::MouseEvent| {
+                    let n = next_id.get_value();
+                    next_id.set_value(n + 1);
+                    owned.update(|v| v.push((n, "#808080".to_string())));
+                    let colors: Vec<String> = owned.with(|v| v.iter().map(|(_, h)| h.clone()).collect());
+                    on_edit.run((id, palette_key.to_string(), ParamValue::Palette(colors)));
+
+                    let target = event_target::<web_sys::Element>(&ev);
+                    let rect = target.get_bounding_client_rect();
+                    editing.set(Some(PickerAnchor {
+                        sid: n,
+                        x: rect.x(),
+                        y: rect.y() + rect.height(),
+                        is_new: true,
+                    }));
+                }
+            >
+                "+"
+            </div>
             {move || editing.get().map(|anchor| {
                 view! {
                     <Portal>
                         <ColorPicker
                             anchor=anchor
                             hex=picker_hex
-                            on_close=Callback::new(move |_| editing.set(None))
+                            on_close=Callback::new(move |_| {
+                                // If this was a new (pre-created) swatch, cancel means "undo the create":
+                                // remove the swatch and re-commit the palette without it.
+                                if anchor.is_new {
+                                    owned.update(|v| v.retain(|(s, _)| *s != anchor.sid));
+                                    let colors: Vec<String> = owned.with(|v| v.iter().map(|(_, h)| h.clone()).collect());
+                                    on_edit.run((id, palette_key.to_string(), ParamValue::Palette(colors)));
+                                }
+                                editing.set(None);
+                            })
                             on_pick=Callback::new(move |new_hex: String| {
                                 let sid = anchor.sid;
                                 owned.update(|v| {
@@ -143,5 +176,6 @@ fn swatch_clicked(ev: leptos::ev::MouseEvent, editing: RwSignal<Option<PickerAnc
         sid: sid,
         x: x,
         y: y,
+        is_new: false,
     }));
 }
