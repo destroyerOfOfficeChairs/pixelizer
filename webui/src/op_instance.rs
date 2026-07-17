@@ -205,9 +205,9 @@ impl OpInstance {
                     _ => return Err(self.miss("dither", "expected a dither value")),
                 };
                 let preserve_alpha = match self.values.get("alpha") {
-                    Some(ParamValue::Bool(bool)) => Some(*bool),
-                    None => None,
-                    _ => return Err(self.miss("alpha", "preserve_alpha missing")),
+                    Some(ParamValue::Bool(true)) => Some(true),
+                    Some(ParamValue::Bool(false)) | None => None,
+                    _ => return Err(self.miss("alpha", "expected a bool")),
                 };
                 Operation::PaletteMap {
                     colors,
