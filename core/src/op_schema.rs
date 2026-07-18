@@ -69,7 +69,7 @@ const DIFFUSE_PARAMS: &[ParamDescriptor] = &[
     ParamDescriptor {
         key: "clamp",
         label: "Clamp to palette range",
-        kind: ParamKind::Bool { default: false },
+        kind: ParamKind::Bool { default: true },
     },
 ];
 

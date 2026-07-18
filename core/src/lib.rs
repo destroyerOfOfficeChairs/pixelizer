@@ -22,20 +22,20 @@ pub enum DitherConfig {
     FloydSteinberg {
         #[serde(default = "default_bleed")]
         bleed: f32,
-        #[serde(default)]
+        #[serde(default = "default_clamp")]
         clamp: bool,
     },
     Atkinson {
         #[serde(default = "default_bleed")]
         bleed: f32,
-        #[serde(default)]
+        #[serde(default = "default_clamp")]
         clamp: bool,
     },
     #[serde(rename = "jjn")]
     Jjn {
         #[serde(default = "default_bleed")]
         bleed: f32,
-        #[serde(default)]
+        #[serde(default = "default_clamp")]
         clamp: bool,
     },
     Bayer4 {
@@ -46,6 +46,10 @@ pub enum DitherConfig {
         #[serde(default = "default_strength")]
         strength: f32,
     },
+}
+
+fn default_clamp() -> bool {
+    true
 }
 
 fn default_bleed() -> f32 {
@@ -75,7 +79,7 @@ pub enum Operation {
     },
     PaletteMap {
         colors: Vec<String>,
-        #[serde(default)]
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         dither: Option<DitherConfig>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         preserve_alpha: Option<bool>,
