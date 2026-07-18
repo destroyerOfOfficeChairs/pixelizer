@@ -91,7 +91,7 @@ pub fn palette_map(
     image: Image,
     colors: &[String],
     dither: Option<DitherConfig>,
-    preserve_alpha: bool,
+    preserve_alpha: Option<bool>,
 ) -> Result<Image, crate::PixelizerError> {
     let foo: PaletteData = prepare_palette(colors)?;
     match dither {
@@ -142,7 +142,7 @@ pub fn palette_map_flat(
     image: Image,
     rgb: Vec<[u8; 3]>,
     lab: Vec<Oklab>,
-    preserve_alpha: bool,
+    preserve_alpha: Option<bool>,
 ) -> Result<Image, crate::PixelizerError> {
     let (w, h) = image.dimensions();
     let mut out = Image::new(w, h);
@@ -151,7 +151,7 @@ pub fn palette_map_flat(
 
     for (x, y, pixel) in image.enumerate_pixels() {
         let [r, g, b, mut a] = pixel.0;
-        if !preserve_alpha {
+        if !preserve_alpha.unwrap_or_default() {
             a = 255;
         }
         let idx = *cache
@@ -172,7 +172,7 @@ pub fn palette_map_diffuse(
     max_per_channel: [f32; 3],
     bleed: f32,
     clamp: bool,
-    preserve_alpha: bool,
+    preserve_alpha: Option<bool>,
 ) -> Result<Image, crate::PixelizerError> {
     let (w, h) = img.dimensions();
 
@@ -190,7 +190,13 @@ pub fn palette_map_diffuse(
 
     let alpha: Vec<u8> = img
         .pixels()
-        .map(|p| if preserve_alpha { p.0[3] } else { 255 })
+        .map(|p| {
+            if preserve_alpha.unwrap_or_default() {
+                p.0[3]
+            } else {
+                255
+            }
+        })
         .collect();
     let mut out = Image::new(w, h);
 
@@ -242,7 +248,7 @@ pub fn palette_map_ordered(
     lab: Vec<Oklab>,
     strength: f32,
     size: usize,
-    preserve_alpha: bool,
+    preserve_alpha: Option<bool>,
 ) -> Result<Image, crate::PixelizerError> {
     let (w, h) = image.dimensions();
     let mut out = Image::new(w, h);
@@ -255,7 +261,7 @@ pub fn palette_map_ordered(
 
     for (x, y, pixel) in image.enumerate_pixels() {
         let [r, g, b, mut a] = pixel.0;
-        if !preserve_alpha {
+        if !preserve_alpha.unwrap_or_default() {
             a = 255
         };
         let bias = match matrix {

@@ -13,9 +13,7 @@ use crate::op_instance::{OpInstance, ParamValue, default_instance};
 use crate::viewport::encode_to_data_url;
 
 /// An edit emitted upward by a Config: set `key` on op `id` to `value`.
-/// Data, not a closure — the whole serde-bridge apparatus is gone. Nested
-/// edits (dither params) are expressed as a single `ParamValue::Dither(_)`
-/// write under key "dither", so this stays uniformly (id, key, value).
+/// (id, key, value)
 pub type EditPayload = (usize, String, ParamValue);
 
 #[derive(Clone)]
@@ -49,10 +47,7 @@ fn App() -> impl IntoView {
     let source = RwSignal::new(None::<pixelizer_core::Image>);
     let output_url = RwSignal::new(None::<String>);
 
-    // Run logic stays here — it owns source/output_url. Exposed as a callback.
-    // The boundary conversion (OpInstance -> Operation) happens here, once per
-    // run, and is the only place a malformed bag can surface — as a logged
-    // error, not a panic.
+    // Run the pipeline of operations on an image.
     let on_run = Callback::new(move |_: ()| {
         let Some(img) = source.get() else { return };
 

@@ -77,8 +77,8 @@ pub enum Operation {
         colors: Vec<String>,
         #[serde(default)]
         dither: Option<DitherConfig>,
-        #[serde(default = "preserve_alpha_default")]
-        preserve_alpha: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        preserve_alpha: Option<bool>,
     },
     Upscale {
         factor: u32,
@@ -95,10 +95,6 @@ pub enum Operation {
         #[serde(default = "default_high_percentile")]
         high: f32,
     },
-}
-
-fn preserve_alpha_default() -> bool {
-    true
 }
 
 fn default_low_percentile() -> f32 {
