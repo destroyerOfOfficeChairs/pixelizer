@@ -1,9 +1,27 @@
-// ----------------------------------------------------------------------------
-// 1. DESCRIPTOR TYPES  —  core (e.g. core/src/describe.rs)
-// ----------------------------------------------------------------------------
-// These are deliberately small and UI-agnostic. They describe a parameter
-// well enough that a generic widget can render it, but they name nothing
-// Leptos- or DOM-specific. Core stays free of frontend concepts.
+//! Descriptor schema for operations and their parameters.
+//!
+//! Small and UI-agnostic by design: describes each parameter well enough that
+//! a generic widget can render it, but names nothing Leptos- or DOM-specific.
+//! Core stays free of frontend concepts even though the *reason* this module
+//! exists is to feed a UI — the typed `Operation` enum doesn't need any of
+//! this to run.
+//!
+//! Split across three files:
+//! - this file: the descriptor types, the two accessors, the cross-cutting
+//!   test that ties `ParamKind::Dither` back to `DITHER_VARIANTS`.
+//! - `tables.rs`: all the `const *_PARAMS` blocks plus `OP_VARIANTS` and
+//!   `DITHER_VARIANTS` — the actual data.
+//! - `labels.rs`: small string-presentation helpers keyed by tag.
+
+mod labels;
+mod tables;
+
+pub use labels::{all_op_menu, label_for_tag};
+pub use tables::{DITHER_VARIANTS, OP_VARIANTS};
+
+// ---------------------------------------------------------------------------
+// Descriptor types
+// ---------------------------------------------------------------------------
 
 /// One tunable parameter of an operation or dither variant.
 #[derive(Clone, Copy, Debug)]
@@ -38,8 +56,6 @@ pub enum ParamKind {
     Dither { default_tag: &'static str },
 }
 
-const DEFAULT_PALETTE: [&str; 2] = ["#000000", "#ffffff"];
-
 /// One selectable variant (e.g. one dither algorithm), with its parameters.
 #[derive(Clone, Debug)]
 pub struct VariantDescriptor {
@@ -51,189 +67,10 @@ pub struct VariantDescriptor {
     pub params: &'static [ParamDescriptor],
 }
 
-// ----------------------------------------------------------------------------
-// 2. THE DITHER DESCRIPTOR TABLE  —  core (next to DitherConfig)
-// ----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Accessors — a small indirection so callers don't index the slices directly.
+// ---------------------------------------------------------------------------
 
-const DIFFUSE_PARAMS: &[ParamDescriptor] = &[
-    ParamDescriptor {
-        key: "bleed",
-        label: "Error bleed",
-        kind: ParamKind::Float {
-            default: 1.0,
-            min: 0.0,
-            max: 1.0,
-            step: 0.05,
-        },
-    },
-    ParamDescriptor {
-        key: "clamp",
-        label: "Clamp to palette range",
-        kind: ParamKind::Bool { default: true },
-    },
-];
-
-const BAYER_PARAMS: &[ParamDescriptor] = &[ParamDescriptor {
-    key: "strength",
-    label: "Dither strength",
-    kind: ParamKind::Float {
-        default: 32.0,
-        min: 0.0,
-        max: 64.0,
-        step: 1.0,
-    },
-}];
-
-const DOWNSAMPLE_PARAMS: &[ParamDescriptor] = &[ParamDescriptor {
-    key: "pixel_size",
-    label: "pixel size",
-    kind: ParamKind::Int {
-        default: 8,
-        min: 1,
-        max: 64,
-    },
-}];
-
-const UPSCALE_PARAMS: &[ParamDescriptor] = &[ParamDescriptor {
-    key: "factor",
-    label: "scale factor",
-    kind: ParamKind::Int {
-        default: 8,
-        min: 1,
-        max: 64,
-    },
-}];
-
-const NORMALIZE_PARAMS: &[ParamDescriptor] = &[
-    ParamDescriptor {
-        key: "low",
-        label: "low value cutoff",
-        kind: ParamKind::Float {
-            default: 0.01,
-            min: 0.0,
-            max: 1.0,
-            step: 0.01,
-        },
-    },
-    ParamDescriptor {
-        key: "high",
-        label: "high value cutoff",
-        kind: ParamKind::Float {
-            default: 0.99,
-            min: 0.0,
-            max: 1.0,
-            step: 0.01,
-        },
-    },
-];
-
-const BLUR_PARAMS: &[ParamDescriptor] = &[ParamDescriptor {
-    key: "sigma",
-    label: "sigma",
-    kind: ParamKind::Float {
-        default: 1.0,
-        min: 0.0,
-        max: 10.0,
-        step: 0.1,
-    },
-}];
-
-const POSTERIZE_PARAMS: &[ParamDescriptor] = &[ParamDescriptor {
-    key: "levels",
-    label: "levels",
-    kind: ParamKind::Int {
-        default: 4,
-        min: 2,
-        max: 16,
-    },
-}];
-
-const PALETTE_MAP_PARAMS: &[ParamDescriptor] = &[
-    ParamDescriptor {
-        key: "palette",
-        label: "palette",
-        kind: ParamKind::Palette {
-            colors: DEFAULT_PALETTE,
-        },
-    },
-    ParamDescriptor {
-        key: "alpha",
-        label: "preserve alpha",
-        kind: ParamKind::Bool { default: true },
-    },
-    ParamDescriptor {
-        key: "dither",
-        label: "dither",
-        kind: ParamKind::Dither {
-            default_tag: "bayer8",
-        },
-    },
-];
-
-/// Every dither variant the UI should offer. The `None` (no dithering) case
-/// is handled by the UI separately — this table is the `Some(_)` options.
-pub const DITHER_VARIANTS: &[VariantDescriptor] = &[
-    VariantDescriptor {
-        tag: "floyd_steinberg",
-        label: "Floyd–Steinberg",
-        params: DIFFUSE_PARAMS,
-    },
-    VariantDescriptor {
-        tag: "atkinson",
-        label: "Atkinson",
-        params: DIFFUSE_PARAMS,
-    },
-    VariantDescriptor {
-        tag: "jjn",
-        label: "JJN",
-        params: DIFFUSE_PARAMS,
-    },
-    VariantDescriptor {
-        tag: "bayer4",
-        label: "Bayer 4×4",
-        params: BAYER_PARAMS,
-    },
-    VariantDescriptor {
-        tag: "bayer8",
-        label: "Bayer 8×8",
-        params: BAYER_PARAMS,
-    },
-];
-
-pub const OP_VARIANTS: &[VariantDescriptor] = &[
-    VariantDescriptor {
-        tag: "downsample",
-        label: "downsample",
-        params: DOWNSAMPLE_PARAMS,
-    },
-    VariantDescriptor {
-        tag: "upscale",
-        label: "upscale",
-        params: UPSCALE_PARAMS,
-    },
-    VariantDescriptor {
-        tag: "normalize",
-        label: "normalize",
-        params: NORMALIZE_PARAMS,
-    },
-    VariantDescriptor {
-        tag: "blur",
-        label: "blur",
-        params: BLUR_PARAMS,
-    },
-    VariantDescriptor {
-        tag: "posterize",
-        label: "posterize",
-        params: POSTERIZE_PARAMS,
-    },
-    VariantDescriptor {
-        tag: "palette_map",
-        label: "palette map",
-        params: PALETTE_MAP_PARAMS,
-    },
-];
-
-// A small accessor so the webui doesn't index the slice directly.
 pub fn dither_variants() -> &'static [VariantDescriptor] {
     DITHER_VARIANTS
 }
@@ -241,6 +78,12 @@ pub fn dither_variants() -> &'static [VariantDescriptor] {
 pub fn op_variants() -> &'static [VariantDescriptor] {
     OP_VARIANTS
 }
+
+// ---------------------------------------------------------------------------
+// Cross-cutting invariant test. Lives here (not in tables.rs) because it
+// checks the relationship between a *type* (ParamKind::Dither) and the
+// *tables* — its home is the module that unifies both.
+// ---------------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
@@ -268,20 +111,4 @@ mod tests {
             }
         }
     }
-}
-
-/// The UI label for an op named by its tag. Falls back to the tag itself if
-/// it isn't in OP_VARIANTS (shouldn't happen for a live instance).
-pub fn label_for_tag(tag: &str) -> &'static str {
-    OP_VARIANTS
-        .iter()
-        .find(|v| v.tag == tag)
-        .map(|v| v.label)
-        .unwrap_or("unknown")
-}
-
-/// Every op the "add operation" menu should offer, as (tag, label) pairs.
-/// Straight from the table — no separate list to maintain.
-pub fn all_op_menu() -> Vec<(&'static str, &'static str)> {
-    OP_VARIANTS.iter().map(|v| (v.tag, v.label)).collect()
 }
