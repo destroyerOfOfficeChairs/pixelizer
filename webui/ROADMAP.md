@@ -35,6 +35,10 @@ Allow the user to download any custom palette they've created.
 
 ## Later Goals
 
+### Color picker bug
+
+The color picker appears off-screen if a swatch is too low on the screen.
+
 ### Viewport polish
 
 - Clear image button
