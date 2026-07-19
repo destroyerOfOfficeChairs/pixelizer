@@ -1,8 +1,5 @@
-mod color_picker;
-mod dither;
 mod generic_config;
 mod palette_map;
-mod swatches;
 
 use generic_config::generic_op_config;
 use palette_map::palette_map_config;

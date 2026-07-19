@@ -12,9 +12,13 @@ pub fn encode_to_data_url(img: &pixelizer_core::Image) -> String {
 }
 
 fn decode(bytes: &[u8]) -> Option<pixelizer_core::Image> {
-    image::load_from_memory(bytes)
-        .ok()
-        .map(|img| img.to_rgba8())
+    match image::load_from_memory(bytes) {
+        Ok(img) => Some(img.to_rgba8()),
+        Err(e) => {
+            leptos::logging::error!("decode failed: {e}");
+            None
+        }
+    }
 }
 
 #[component]

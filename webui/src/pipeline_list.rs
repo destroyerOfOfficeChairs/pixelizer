@@ -38,7 +38,7 @@ pub fn PipelineList(
     });
 
     view! {
-        <div class="max-w-md p-4 flex flex-col gap-3">
+        <div class="w-[28rem] p-4 flex flex-col gap-3">
             <h3 class="text-lg font-bold text-teal-300">"Pipeline"</h3>
             <div class="flex flex-col gap-3">
                 <For

@@ -1,9 +1,13 @@
-use super::dither::DitherConfig;
+mod color_picker;
+mod dither;
+mod swatches;
+
 use super::generic_config::BoolWidget;
-use super::swatches::Swatches;
 use crate::op_instance::ParamValue;
 use crate::{EditPayload, OpRow, Palettes};
+use dither::DitherConfig;
 use leptos::prelude::*;
+use swatches::Swatches;
 
 const PALETTE_KEY: &'static str = "palette";
 
