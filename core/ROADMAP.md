@@ -6,6 +6,10 @@ For the rationale behind code that already exists, see [DESIGN.md](DESIGN.md). F
 
 ---
 
+## Easy Win
+
+Make it so that image file sizes are super small. Take advantage of the fact that output images will have a limited color palette.
+
 ## Operations
 
 ### Resize
