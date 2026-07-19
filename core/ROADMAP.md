@@ -8,6 +8,14 @@ For the rationale behind code that already exists, see [DESIGN.md](DESIGN.md). F
 
 ## Operations
 
+### Resize
+
+Currently, the only way to pixelize an image is to specify the desired pixel size.
+
+Create an operation that allows the user to specify the desired output size of a pixelized image.
+
+Make controls to allow the user to preserve aspect ratio. Also, consider allowing the user to select which filtering type they want.
+
 ### `kuwahara` — edge-preserving smoothing
 
 **Why.** Does what `blur` can't: smooth *within* regions without smoothing *across* edges. A Gaussian softens everything uniformly, including the boundaries worth keeping sharp before quantization. Kuwahara flattens flat areas into solid color while leaving edges intact — exactly the input quantization wants, since it collapses noise and gradients into the uniform patches a small palette represents cleanly. It's arguably a better aesthetic fit for this pipeline than any other planned op.
