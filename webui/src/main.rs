@@ -22,6 +22,7 @@ pub struct OpRow {
     pub inst: OpInstance,
 }
 
+#[derive(Clone)]
 pub struct Palettes {
     palettes: Vec<(String, Vec<String>)>,
 }
@@ -94,7 +95,7 @@ fn App() -> impl IntoView {
 fn main() {
     console_error_panic_hook::set_once();
     mount_to_body(|| {
-        provide_context(StoredValue::new(Palettes::load()));
+        provide_context(RwSignal::new(Palettes::load()));
         view! { <App/> }
     });
 }

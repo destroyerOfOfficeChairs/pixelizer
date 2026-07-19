@@ -1,11 +1,13 @@
 mod color_picker;
 mod dither;
+mod dropzone;
 mod swatches;
 
 use super::generic_config::BoolWidget;
 use crate::op_instance::ParamValue;
 use crate::{EditPayload, OpRow, Palettes};
 use dither::DitherConfig;
+use dropzone::PaletteDropZone;
 use leptos::prelude::*;
 use swatches::Swatches;
 
@@ -17,20 +19,22 @@ pub fn palette_map_config(
     on_edit: Callback<EditPayload>,
 ) -> AnyView {
     let preloaded_palettes =
-        use_context::<StoredValue<Palettes>>().expect("You forgot to provide palettes.");
+        use_context::<RwSignal<Palettes>>().expect("You forgot to provide palettes.");
 
-    let options = preloaded_palettes.with_value(|p| {
-        p.palettes
-            .iter()
-            .map(|(name, _colors)| {
-                view! { <option value=name.clone()>{name.clone()}</option> }
-            })
-            .collect_view()
-    });
+    let options = move || {
+        preloaded_palettes.with(|p| {
+            p.palettes
+                .iter()
+                .map(|(name, _colors)| {
+                    view! { <option value=name.clone()>{name.clone()}</option> }
+                })
+                .collect_view()
+        })
+    };
 
     let on_change = move |ev| {
         let chosen = event_target_value(&ev);
-        let colors = preloaded_palettes.with_value(|p| {
+        let colors = preloaded_palettes.with(|p| {
             p.palettes
                 .iter()
                 .find(|(name, _)| *name == chosen)
@@ -41,8 +45,22 @@ pub fn palette_map_config(
         }
     };
 
+    let on_load = Callback::new(move |(name, colors): (String, Vec<String>)| {
+        preloaded_palettes.update(|p| {
+            // Re-uploading a same-named file replaces the old entry
+            // instead of duplicating it.
+            p.palettes.retain(|(n, _)| *n != name);
+            p.palettes.push((name.clone(), colors.clone()));
+            p.palettes.sort_by(|a, b| a.0.cmp(&b.0));
+        });
+        // Auto-select the upload: committing its colors is what "selecting
+        // a palette" means everywhere else, so do the same here.
+        on_edit.run((id, PALETTE_KEY.to_string(), ParamValue::Palette(colors)));
+    });
+
     view! {
         <div class="flex flex-col">
+            <PaletteDropZone on_load=on_load />
             <div class="px-3 pt-1">
                 <select
                     class="bg-slate-900 border border-slate-700 rounded-md text-sm \
