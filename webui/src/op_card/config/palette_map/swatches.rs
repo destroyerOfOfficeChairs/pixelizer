@@ -12,6 +12,11 @@ pub struct PickerAnchor {
     pub is_new: bool,
 }
 
+/// Picker height, measured once in devtools.
+const PICKER_HEIGHT: f64 = 320.0;
+/// Gap between swatch and picker, matching the natural spacing below.
+const PICKER_GAP: f64 = 4.0;
+
 #[component]
 pub fn Swatches(
     id: usize,
@@ -118,14 +123,18 @@ pub fn Swatches(
                     let colors: Vec<String> = owned.with(|v| v.iter().map(|(_, h)| h.clone()).collect());
                     on_edit.run((id, palette_key.to_string(), ParamValue::Palette(colors)));
 
+                    // let target = event_target::<web_sys::Element>(&ev);
+                    // let rect = target.get_bounding_client_rect();
+                    // editing.set(Some(PickerAnchor {
+                    //     sid: n,
+                    //     x: rect.x(),
+                    //     y: rect.y() + rect.height(),
+                    //     is_new: true,
+                    // }));
                     let target = event_target::<web_sys::Element>(&ev);
                     let rect = target.get_bounding_client_rect();
-                    editing.set(Some(PickerAnchor {
-                        sid: n,
-                        x: rect.x(),
-                        y: rect.y() + rect.height(),
-                        is_new: true,
-                    }));
+                    let (x, y) = anchor_for(&rect);
+                    editing.set(Some(PickerAnchor { sid: n, x, y, is_new: true }));
                 }
             >
                 "+"
@@ -170,12 +179,29 @@ fn swatch_clicked(ev: leptos::ev::MouseEvent, editing: RwSignal<Option<PickerAnc
     ev.stop_propagation();
     let target = event_target::<web_sys::Element>(&ev);
     let rect = target.get_bounding_client_rect();
-    let x = rect.x();
-    let y = rect.y() + rect.height();
+    let (x, y) = anchor_for(&rect);
     editing.set(Some(PickerAnchor {
-        sid: sid,
-        x: x,
-        y: y,
+        sid,
+        x,
+        y,
         is_new: false,
     }));
+}
+
+/// Where to put the picker for a swatch at `rect`: below if it fits,
+/// flipped above if it would run off the bottom of the viewport.
+fn anchor_for(rect: &web_sys::DomRect) -> (f64, f64) {
+    let viewport_h = window()
+        .inner_height()
+        .ok()
+        .and_then(|v| v.as_f64())
+        .unwrap_or(800.0);
+
+    let below = rect.y() + rect.height() + PICKER_GAP;
+    let y = if below + PICKER_HEIGHT > viewport_h {
+        rect.y() - PICKER_HEIGHT - PICKER_GAP // flip above
+    } else {
+        below
+    };
+    (rect.x(), y)
 }

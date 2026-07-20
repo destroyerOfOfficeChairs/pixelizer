@@ -76,6 +76,12 @@ pub fn ColorPicker(
         dragging.set(Dragging::None);
     });
 
+    let _ = use_event_listener(window(), leptos::ev::scroll, move |_| {
+        if dragging.get_untracked() == Dragging::None {
+            on_close.run(());
+        }
+    });
+
     let _ = on_click_outside(picker_ref, move |_| on_close.run(()));
 
     view! {
