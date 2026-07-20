@@ -6,38 +6,25 @@ The biggest item — moving the pipeline off the main thread — sits at the bot
 
 ---
 
-## In progress
+## In Progress
 
-### Palette Map card — palette selector
+Make some better mechanism to add operations to the pipeline.
 
-**Replace the `<select>` with a custom picker component.** A native `<option>` renders text only — no per-row swatches, no arbitrary entries, no "Custom" state, no embedded drop zone.
+Consider whether categorizing operations is the right move. Right now there are only 6 operations, but after adding a few more (see core's ROADMAP.md), a list of operations might feel cumbersome.
 
-**In-list swatches** — each picker row shows the palette name plus a mini swatch strip, so all options are visible without click-testing each. This is *why* the native select had to go; it's the first payoff of the picker.
+Consider adding little "preview" "before/after" images to the operations' rows. Maybe they're inline, maybe the appear on hover along with some descriptive text.
 
-**File upload → new named entry.** Two separable problems, different difficulty:
-  - *Intake:* start with `<input type="file">` (~10 lines, reuses the async-read pattern in `viewport.rs` — `gloo_file` + `read_as_bytes`). A drop zone is nicer but adds drag-event handling and visual states; do it second, once parsing works. The picker can host the drop zone once it exists.
-  - *Parsing:* format difficulty varies wildly (see the format list below). An uploaded file's name becomes a new entry in the picker.
+Consider some mechanism to allow the user to add operations at any point in the pipeline, and not just at the end. Though, drag and drop reordering is implemented, this becomes less of a problem.
 
-**Palette file formats** (from lospec's export options), easiest-first — implement the cheap text ones, skip the binary one:
-
-- **HEX** — one hex code per line. Trivial; maps straight onto the existing `Vec<String>` of `#rrggbb`. *Do first.*
-- **GIMP GPL** — text; `R G B Name` rows after a header line. Easy.
-- **JASC PAL** — text; a count line then `R G B` rows. Easy.
-- **Paint.NET TXT** — one `AARRGGBB` hex per line, `;` comments. Easy (strip the alpha).
-
-HEX + GPL covers the two most common lospec exports for almost no cost; the other two text formats are cheap add-ons.
-
-**File download**
-
-Allow the user to download any custom palette they've created.
+Need to brainstorm this more.
 
 ---
 
 ## Later Goals
 
-### Color picker bug
+### Palette file download
 
-The color picker appears off-screen if a swatch is too low on the screen.
+Allow the user to download any custom palette they've created.
 
 ### Viewport polish
 
@@ -52,10 +39,6 @@ The color picker appears off-screen if a swatch is too low on the screen.
 ### Undo/Redo buttons
 
 Probably more work than it seems, but it would be worth it.
-
-### Droppable palette files
-
-Let users drop a palette file so colors aren't chosen one at a time. Today palettes are only the compiled-in options from `palettes.yaml` (`include_str!`); this supplies them at runtime. Pairs with the swatch UI — a dropped file populates the swatches.
 
 ### Drag-and-drop reordering
 
@@ -89,7 +72,7 @@ The YAML preview covers *export* — the displayed YAML round-trips with the CLI
 
 ### Custom Save File
 
-Further expanding on the `pipeline import` goal, create a custom file type to save an entire workflow, images included.
+Further expanding on the `pipeline import` goal, create a custom file type (Or use some existing file type that makes sense for this purpose) to save an entire workflow, images included.
 
 This will need a way to save/load files, and the associated UI.
 

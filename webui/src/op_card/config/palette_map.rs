@@ -14,6 +14,7 @@ use leptos::prelude::*;
 use swatches::Swatches;
 
 const PALETTE_KEY: &'static str = "palette";
+pub const MAX_PALETTE_COLORS: usize = 256;
 
 pub fn palette_map_config(
     id: usize,

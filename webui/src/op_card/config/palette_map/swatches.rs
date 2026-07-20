@@ -1,4 +1,5 @@
 use super::color_picker::ColorPicker;
+use crate::op_card::config::palette_map::MAX_PALETTE_COLORS;
 use crate::op_instance::ParamValue;
 use crate::{EditPayload, OpRow};
 use leptos::portal::Portal;
@@ -27,6 +28,7 @@ pub fn Swatches(
     let owned = RwSignal::new(Vec::<(usize, String)>::new());
     let next_id = StoredValue::new(0usize);
     let editing: RwSignal<Option<PickerAnchor>> = RwSignal::new(None);
+    let at_cap = Signal::derive(move || owned.with(|v| v.len() >= MAX_PALETTE_COLORS));
 
     let bag_colors = {
         Signal::derive(move || {
@@ -77,7 +79,7 @@ pub fn Swatches(
     });
 
     view! {
-        <div class="flex flex-wrap gap-1 px-3 py-2">
+        <div class="flex flex-wrap gap-1 px-3 py-2 max-h-64 overflow-y-auto">
             <For
                 each=move || owned.get()
                 key=|(id, _)| *id
@@ -116,6 +118,7 @@ pub fn Swatches(
                 class="w-8 h-8 border border-dashed border-slate-600 rounded
                     flex items-center justify-center text-slate-500
                     hover:border-slate-400 hover:text-slate-300 cursor-pointer"
+                class:hidden=move || at_cap.get()
                 on:click=move |ev: leptos::ev::MouseEvent| {
                     let n = next_id.get_value();
                     next_id.set_value(n + 1);
