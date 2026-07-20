@@ -101,6 +101,8 @@ Open question: is this a *new operation* that emits a palette into a following `
 
 **Parameters.** `x`, `y`, `width`, `height` (all `u32`).
 
+This is a low priority item that might not be implemented. Cropping is better with drag controls, not just sliders on a card. Also, the user should crop their image before bringing it to Pixelizer.
+
 ---
 
 ## Suggested priority
