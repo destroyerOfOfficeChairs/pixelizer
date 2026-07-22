@@ -7,7 +7,8 @@ pub fn Inserter(
     always_expanded: Signal<bool>,
 ) -> impl IntoView {
     let expanding_line_class = move || {
-        let base = "absolute w-full h-[1px] bg-teal-400 transition-transform duration-300 origin-center pointer-events-none";
+        let base = "absolute w-full h-[1px] bg-teal-400 transition-transform\
+            duration-300 origin-center pointer-events-none";
         if always_expanded.get() {
             format!("{} scale-x-100", base)
         } else {
@@ -15,7 +16,11 @@ pub fn Inserter(
         }
     };
     let expanding_dot_class = move || {
-        let base = "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center rounded-full bg-teal-400 text-white shadow-sm overflow-hidden transition-all duration-300 ease-out pointer-events-none group-focus-visible:ring-2 group-focus-visible:ring-teal-500 group-focus-visible:ring-offset-1";
+        let base = "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 \
+            flex items-center justify-center rounded-full bg-teal-400 text-white\
+            shadow-sm overflow-hidden transition-all duration-300 ease-out\
+            pointer-events-none group-focus-visible:ring-2\
+            group-focus-visible:ring-teal-500 group-focus-visible:ring-offset-1";
         if always_expanded.get() {
             format!("{} w-7 h-7", base)
         } else {
@@ -38,7 +43,7 @@ pub fn Inserter(
             type="button"
             aria-label="Insert operation here"
             class="relative w-full h-0 flex items-center justify-center group z-10 \
-                   focus:outline-none"
+                   cursor-pointer focus:outline-none"
         >
             // Invisible hitbox (extends above and below)
             <span class="absolute inset-x-0 -top-3 -bottom-3"></span>
