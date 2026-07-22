@@ -3,6 +3,8 @@ use leptos::prelude::*;
 use op_card::OpCard;
 mod add_op;
 use add_op::AddOp;
+mod inserter;
+use inserter::Inserter;
 mod yaml_preview;
 use yaml_preview::YamlPreview;
 
@@ -41,6 +43,7 @@ pub fn PipelineList(
         <div class="w-[28rem] p-4 flex flex-col gap-3">
             <h3 class="text-lg font-bold text-teal-300">"Pipeline"</h3>
             <div class="flex flex-col gap-3">
+                <Inserter />
                 <For
                     each=move || rows.get()
                     key=|r| r.id
@@ -58,6 +61,7 @@ pub fn PipelineList(
                         }
                     }
                 />
+                <Inserter always_expanded=true />
             </div>
 
             <AddOp set_rows=set_rows />
